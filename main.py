@@ -1,61 +1,43 @@
-from typing import Final
+from discord.ext import commands
 import os
-from dotenv import load_dotenv #test
-from discord import Intents, Client, Message
-from responses import get_response
+from dotenv import load_dotenv
+import discord
 
-# STEP 0: LOAD OUR TOKEN FROM SOMEWHERE SAFE
+# Load the environment variable
 load_dotenv()
-TOKEN: Final[str] = os.getenv('DISCORD_TOKEN')
+TOKEN = os.getenv('DISCORD_TOKEN')
 
-# STEP 1: BOT SETUP
-intents: Intents = Intents.default()
-intents.message_content = True  # NOQA #testss
-client: Client = Client(intents=intents)
+# Initialize the bot
+bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
 
-# STEP 2: MESSAGE FUNCTIONALITY
-async def send_message(message: Message, user_message: str) -> None:
-    if not user_message:
-        print('(Message was empty because intents were not enabled probably)')
-        return
+class OptionsDropdown(discord.ui.Select):
+    def __init__(self):
+        options=[
+            discord.SelectOption(label='NBA Scores', description='Live scores from nba games 🏀'),
+            discord.SelectOption(label = 'Play-by-play', description='ESPN play-by-play of the game 📢'),
+            discord.SelectOption(label='Player Stats', description='Player stats📊'),
+            discord.SelectOption(label='Latest News', description='Reliable news sources 📰'),
+        
+        ]
+        super().__init__(placeholder='Choose an option', options=options, min_values=1, max_values=1)
 
-    if is_private := user_message[0] == '?':
-        user_message = user_message[1:]
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f'You selected `{self.values[0]}`, nice!')
 
-    try:
-        response: str = get_response(user_message)
-        await message.author.send(response) if is_private else await message.channel.send(response)
-    except Exception as e:
-        print(e)
+class DropdownView(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.add_item(OptionsDropdown())
 
+@bot.command()
+async def dropdown(ctx):
+    """Sends a message with a dropdown."""
+    await ctx.send('Please select an option:', view=DropdownView())
 
-# STEP 3: HANDLING THE STARTUP FOR OUR BOT
-@client.event
-async def on_ready() -> None:
-    print(f'{client.user} is now running!')
+# Event to confirm the bot is online
+@bot.event
+async def on_ready():
+    print(f'{bot.user.name} has connected to Discord!')
 
-
-# STEP 4: HANDLING INCOMING MESSAGES
-@client.event
-async def on_message(message: Message) -> None:
-    if message.author == client.user:
-        return
-
-    username: str = str(message.author)
-    user_message: str = message.content
-    channel: str = str(message.channel)
-
-    print(f'[{channel}] {username}: "{user_message}"')
-    await send_message(message, user_message)
-
-
-# STEP 5: MAIN ENTRY POINT
-def main() -> None:
-    client.run(token=TOKEN)
-
-
-if __name__ == '__main__':
-    main()
-
-
+bot.run(TOKEN)
