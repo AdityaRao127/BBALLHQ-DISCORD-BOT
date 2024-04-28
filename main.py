@@ -2,6 +2,7 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 import discord
+from stats import get_player_stats
 
 # Load the environment variable
 load_dotenv()
@@ -14,16 +15,45 @@ bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 class OptionsDropdown(discord.ui.Select):
     def __init__(self):
         options=[
-            discord.SelectOption(label='NBA Scores', description='Live scores from nba games 🏀'),
-            discord.SelectOption(label = 'Play-by-play', description='ESPN play-by-play of the game 📢'),
+            discord.SelectOption(label='Live NBA Scores', description='Live scores from nba games 🏀'),
+            discord.SelectOption(label = 'Play-by-play', description='NBA play-by-play of the game 📢'),
             discord.SelectOption(label='Player Stats', description='Player stats📊'),
+            discord.SelectOption(label ='Team Stats', description='Team_stats📊'),
+            discord.SelectOption(label ='Shot Chart', description='Shot chart of players and teams 📈'),
+            discord.SelectOption(label='Machine Learning Prediction', description='Simple ML-based predictions of a game🤖'),
             discord.SelectOption(label='Latest News', description='Reliable news sources 📰'),
         
         ]
         super().__init__(placeholder='Choose an option', options=options, min_values=1, max_values=1)
 
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_message(f'You selected `{self.values[0]}`, nice!')
+        if self.values[0] == "Live NBA Scores":
+           interaction.response.send_message("Unknown option selected, please try again.")
+        elif self.values[0] == "Play-by-play":
+           interaction.response.send_message("Unknown option selected, please try again.")
+        elif self.values[0] == "Player Stats":
+             await interaction.response.send_modal(PlayerStatsModal())
+        elif self.values[0] == "Team Stats":
+          interaction.response.send_message("Unknown option selected, please try again.")
+        elif self.values[0] == "Shot Chart":
+          interaction.response.send_message("Unknown option selected, please try again.")
+        elif self.values[0] == "Machine Learning Prediction":
+            interaction.response.send_message("Unknown option selected, please try again.")
+        elif self.values[0] == "Latest News":
+          interaction.response.send_message("Unknown option selected, please try again.")
+        else:
+            await interaction.response.send_message("Unknown option selected, please try again.")
+
+# get inputs for the functions
+class PlayerStatsModal(discord.ui.Modal, title="Player Stats"):
+    # Text input for player name
+    player_name = discord.ui.TextInput(label="Enter the NBA player's name:")
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Handle the player stats lookup when the modal form is submitted
+        player_stats = await get_player_stats(self.player_name.value)
+        await interaction.response.send_message(player_stats)
+        
 
 class DropdownView(discord.ui.View):
     def __init__(self):
@@ -34,6 +64,17 @@ class DropdownView(discord.ui.View):
 async def dropdown(ctx):
     """Sends a message with a dropdown."""
     await ctx.send('Please select an option:', view=DropdownView())
+
+@bot.command()
+async def nba(ctx):
+    """Sends a message with a dropdown."""
+    await ctx.send('Please select an option:', view=DropdownView())
+
+@bot.command()
+async def hi(ctx):
+    await ctx.send('Hello, I an NBA bot. Type !nba to get started!')
+    
+
 
 # Event to confirm the bot is online
 @bot.event
