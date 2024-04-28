@@ -10,7 +10,7 @@ TOKEN: Final[str] = os.getenv('DISCORD_TOKEN')
 
 # STEP 1: BOT SETUP
 intents: Intents = Intents.default()
-intents.message_content = True  # NOQA #tests
+intents.message_content = True  # NOQA #testss
 client: Client = Client(intents=intents)
 
 
