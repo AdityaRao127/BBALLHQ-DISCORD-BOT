@@ -62,10 +62,26 @@ class TeamStats(discord.ui.Modal, title="Team Stats"):
     async def on_submit(self, interaction: discord.Interaction):
         # Handle the player stats lookup when the modal form is submitted
         await interaction.response.defer()
-        loading_message = await interaction.followup.send("Loading...")
+        loading_message = await interaction.followup.send("Loading team stats...")
         team_stats = await get_team_stats(self.team_name.value)
         await loading_message.edit(content=team_stats)
         
+class ShotChart(discord.ui.Modal, title="Shot Chart"):
+    # Text input for player name
+    player_chart_name = discord.ui.TextInput(label="Enter the NBA player's name:")
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Defer
+        await interaction.response.defer()
+        # Generate the shot chart
+        buffer, error = await shot_map(self.player_chart_name.value)
+        new_loading_message = await interaction.followup.send("Loading team stats...")
+        if error is not None:
+            await interaction.followup.send(error)
+            return
+        
+        file = discord.File(buffer, filename="shot_chart.png")
+        await new_loading_message.edit(interaction.followup.send(file=file))
 
 class DropdownView(discord.ui.View):
     def __init__(self):
