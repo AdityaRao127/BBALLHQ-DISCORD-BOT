@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import discord
 from stats import get_player_stats, get_team_stats 
 from shotchart import shot_map
+from discord.ui import View, Button
 
 # Load the environment variable
 load_dotenv()
@@ -51,43 +52,59 @@ class PlayerStats(discord.ui.Modal, title="Player Stats"):
     player_name = discord.ui.TextInput(label="Enter the NBA player's name:")
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Handle the player stats lookup when the modal form is submitted
+
         player_stats = await get_player_stats(self.player_name.value)
         await interaction.response.send_message(player_stats)
         
 class TeamStats(discord.ui.Modal, title="Team Stats"):
-    # Text input for player name
+
     team_name = discord.ui.TextInput(label="Enter an NBA team name:")
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Handle the player stats lookup when the modal form is submitted
         await interaction.response.defer()
         loading_message = await interaction.followup.send("Loading team stats...")
         team_stats = await get_team_stats(self.team_name.value)
         await loading_message.edit(content=team_stats)
+# new view for shotcharts
+class ChartTypeView(discord.ui.View):
+    def __init__(self, player_name):
+        super().__init__()
+        self.player_name = player_name
+
+    @discord.ui.button(label="Regular Shot Chart", style=discord.ButtonStyle.primary)
+    async def regular_chart_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        buffer, error = await shot_map(self.player_name, chart_type='regular')
+        if buffer:
+            await interaction.followup.send(file=discord.File(fp=buffer, filename='shot_chart.png'))
+        # go back to home or display charts again?
+        else:
+            await interaction.followup.send("An error occurred: " + error)
+
+    @discord.ui.button(label="Heatmap Shot Chart", style=discord.ButtonStyle.danger)
+    async def heatmap_chart_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        buffer, error = await shot_map(self.player_name, chart_type='heatmap')
+        if buffer:
+            await interaction.followup.send(file=discord.File(fp=buffer, filename='heatmap_chart.png'))
+        else:
+            await interaction.followup.send("An error occurred: " + error)
+            
         
 class ShotChart(discord.ui.Modal, title="Shot Chart"):
     # Text input for player name
     player_chart_name = discord.ui.TextInput(label="Enter the NBA player's name:")
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Defer
         await interaction.response.defer()
-        # Generate the shot chart
-        buffer, error = await shot_map(self.player_chart_name.value)
-        new_loading_message = await interaction.followup.send("Loading team stats...")
-        if error is not None:
-            await interaction.followup.send(error)
-            return
-        
-        file = discord.File(buffer, filename="shot_chart.png")
-        await new_loading_message.edit(interaction.followup.send(file=file))
+        view = ChartTypeView(self.player_chart_name.value)
+        await interaction.followup.send("Select chart type:", view=view)
+
 
 class DropdownView(discord.ui.View):
     def __init__(self):
         super().__init__()
         self.add_item(OptionsDropdown())
-
 @bot.command()
 async def dropdown(ctx):
     """Sends a message with a dropdown."""
@@ -108,5 +125,4 @@ async def hi(ctx):
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
-
 bot.run(TOKEN)

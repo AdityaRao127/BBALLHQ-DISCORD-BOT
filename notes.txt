@@ -1,0 +1,9 @@
+GET https://api.balldontlie.io/v1/odds
+ ^ betting odds idea
+
+ nba_api credits 
+ balldontlie
+ 
+ next to add: 
+ - nba live game play-by-play 
+ - no luck in getting tweet scrapers from nba reporters, will explore other options
