@@ -2,7 +2,8 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 import discord
-from stats import get_player_stats
+from stats import get_player_stats, get_team_stats 
+from shotchart import shot_map
 
 # Load the environment variable
 load_dotenv()
@@ -32,11 +33,11 @@ class OptionsDropdown(discord.ui.Select):
         elif self.values[0] == "Play-by-play":
            interaction.response.send_message("Unknown option selected, please try again.")
         elif self.values[0] == "Player Stats":
-             await interaction.response.send_modal(PlayerStatsModal())
+             await interaction.response.send_modal(PlayerStats())
         elif self.values[0] == "Team Stats":
-          interaction.response.send_message("Unknown option selected, please try again.")
+             await interaction.response.send_modal(TeamStats())
         elif self.values[0] == "Shot Chart":
-          interaction.response.send_message("Unknown option selected, please try again.")
+               await interaction.response.send_modal(ShotChart())
         elif self.values[0] == "Machine Learning Prediction":
             interaction.response.send_message("Unknown option selected, please try again.")
         elif self.values[0] == "Latest News":
@@ -45,7 +46,7 @@ class OptionsDropdown(discord.ui.Select):
             await interaction.response.send_message("Unknown option selected, please try again.")
 
 # get inputs for the functions
-class PlayerStatsModal(discord.ui.Modal, title="Player Stats"):
+class PlayerStats(discord.ui.Modal, title="Player Stats"):
     # Text input for player name
     player_name = discord.ui.TextInput(label="Enter the NBA player's name:")
 
@@ -53,6 +54,17 @@ class PlayerStatsModal(discord.ui.Modal, title="Player Stats"):
         # Handle the player stats lookup when the modal form is submitted
         player_stats = await get_player_stats(self.player_name.value)
         await interaction.response.send_message(player_stats)
+        
+class TeamStats(discord.ui.Modal, title="Team Stats"):
+    # Text input for player name
+    team_name = discord.ui.TextInput(label="Enter an NBA team name:")
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Handle the player stats lookup when the modal form is submitted
+        await interaction.response.defer()
+        loading_message = await interaction.followup.send("Loading...")
+        team_stats = await get_team_stats(self.team_name.value)
+        await loading_message.edit(content=team_stats)
         
 
 class DropdownView(discord.ui.View):
