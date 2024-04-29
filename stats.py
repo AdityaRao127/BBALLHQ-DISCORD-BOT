@@ -26,7 +26,7 @@ async def get_player_stats(player_name):
 
         # Prepare structured regular stats data
         regular_stats_message = (
-            f"**Regular Stats for {player_name}, {current_year}-{current_year+1}**\n"
+            f"**Regular Season Stats for {player_name.title()}, {current_year}-{current_year+1}**\n"
             f"Points Per Game : {latest_season_reg['PTS'] / latest_season_reg['GP']:.1f}\n"
             f"Assists Per Game: {latest_season_reg['AST'] / latest_season_reg['GP']:.1f}\n"
             f"Rebounds Per Game: {latest_season_reg['REB'] / latest_season_reg['GP']:.1f}\n"
@@ -75,7 +75,7 @@ async def get_team_stats(team_name):
         }
 
         stats_message = (
-            f"**{team_name} Stats for {current_year}-{current_year+1} Season**\n"
+            f"**{team_name.title()} Regular Season Stats for {current_year}-{current_year+1} Season**\n"
             f"Wins: {stats['Wins']}\n"
             f"Losses: {stats['Losses']}\n"
             f"Win Percentage: {stats['Win Percentage']}%\n"

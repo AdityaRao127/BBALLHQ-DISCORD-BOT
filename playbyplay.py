@@ -51,11 +51,14 @@ async def fetch_live_games():
         
         # Current time
         now = datetime.now(tz=pytz.utc)
+        today = now.astimezone(pytz.timezone('America/Los_Angeles')).date()
 
         for game in games:
             # local timezone
-            gameTimeLTZ = parser.parse(game["gameTimeUTC"]).replace(tzinfo=pytz.utc).astimezone(pytz.timezone('America/Los_Angeles'))
-            
+            game_time_utc = parser.parse(game["gameTimeUTC"]).replace(tzinfo=pytz.utc)
+            game_time_ltz = game_time_utc.astimezone(pytz.timezone('America/Los_Angeles'))
+            game_date = game_time_ltz.date()
+
             home_team = game['homeTeam']['teamName']
             away_team = game['awayTeam']['teamName']
             home_score = game['homeTeam']['score']
@@ -63,23 +66,27 @@ async def fetch_live_games():
             game_status = game['gameStatus']
             game_id = game['gameId']
 
-            time_display = gameTimeLTZ.strftime('%I:%M %p %Z')
+            time_display = game_time_ltz.strftime('%I:%M %p %Z')
 
-            if game_status == 1:  # Game is upcoming
-                upcoming_games.append(f"**{away_team} vs. {home_team}** starts at {time_display}")
-            elif game_status == 2:  # Game is ongoing
-                ongoing_games.append(f"**{away_team} vs. {home_team}** @ {time_display}\nCurrent score: {away_team} `{away_score}` - `{home_score}` {home_team}\n")
-            elif game_status == 3:  # Game is completed
-                if home_score > away_score:
-                    winner = f"{home_team} win"
-                else:
-                    winner = f"{away_team} win"
-                finished_games.append(f"{away_team} vs. {home_team}\nScore: ||{away_score} - {home_score}, ***{winner}***||\n")
+            if game_date < today:  # Game is from yesterday or earlier
+                continue  # Skip games from previous days
+            elif game_date == today:  # Game is today
+                if game_status == 1:  # Game is upcoming
+                    upcoming_games.append(f"**{away_team} vs. {home_team}** starts at {time_display}")
+                elif game_status == 2:  # Game is ongoing
+                    ongoing_games.append(f"**{away_team} vs. {home_team}** @ {time_display}\nCurrent score: {away_team} `{away_score}` - `{home_score}` {home_team}\n")
+                elif game_status == 3:  # Game is completed
+                    if home_score > away_score:
+                        winner = f"{home_team} win"
+                    else:
+                        winner = f"{away_team} win"
+                    finished_games.append(f"{away_team} vs. {home_team}\nScore: ||{away_score} - {home_score}, ***{winner}***||\n")
+            else:  # Game is from tomorrow or later
+                pass  # You can add code here to handle future games if needed
 
         # Date formatting
-        date_today = datetime.now()
-        formatted_date = date_today.strftime("%B %d")
-        summary = f"**NBA GAMES FOR {formatted_date} ({date_today.month}/{date_today.day})**\n"
+        formatted_date = today.strftime("%B %d")
+        summary = f"**NBA GAMES FOR {formatted_date} ({today.month}/{today.day})**\n"
 
         # Append each category to summary
         if upcoming_games:

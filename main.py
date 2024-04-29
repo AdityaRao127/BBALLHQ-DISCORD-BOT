@@ -58,22 +58,27 @@ class OptionsDropdown(discord.ui.Select):
 # get inputs for the functions
 class PlayerStats(discord.ui.Modal, title="Player Stats"):
     # Text input for player name
-    player_name = discord.ui.TextInput(label="Enter the NBA player's name:")
+    player_name = discord.ui.TextInput(label="Enter the NBA player's name:", style=discord.TextStyle.short)
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Acknowledge the interaction
+        await interaction.response.defer()
 
+        # Fetch player stats
+        loading_player_message = await interaction.followup.send(f"Loading {self.player_name.value.title()} stats...")
         player_stats = await get_player_stats(self.player_name.value)
-        await interaction.response.send_message(player_stats)
+        await loading_player_message.edit(content=player_stats)
         
 class TeamStats(discord.ui.Modal, title="Team Stats"):
 
-    team_name = discord.ui.TextInput(label="Enter an NBA team name:")
+    team_name = discord.ui.TextInput(label="Enter an NBA team name:", style=discord.TextStyle.short)
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        loading_message = await interaction.followup.send("Loading team stats...")
+        loading_message = await interaction.followup.send(f"Loading {self.team_name.value.title()} stats...")
         team_stats = await get_team_stats(self.team_name.value)
         await loading_message.edit(content=team_stats)
+        
 # new view for shotcharts
 class ChartTypeView(discord.ui.View):
     def __init__(self, player_name):
