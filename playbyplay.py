@@ -1,30 +1,49 @@
 from nba_api.stats.endpoints import playbyplayv3
 from nba_api.stats.endpoints import scoreboardv2
 from nba_api.live.nba.endpoints import scoreboard
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil import parser, tz
 import pytz 
 from nba_api.live.nba.endpoints import boxscore
-
+from nba_api.live.nba.endpoints import playbyplay
 async def get_play_by_play(game_id):
     try:
-        pbp = playbyplayv3.PlayByPlayV3(game_id=game_id)
-        df = pbp.get_data_frames()
-        if df and not df[0].empty:
-            plays = df[0]
-            formatted_data = '\n'.join(f"{play['PCTIMESTRING']} - {play['HOMEDESCRIPTION'] if play['HOMEDESCRIPTION'] else play['VISITORDESCRIPTION']}" for index, play in plays.iterrows())
-            return formatted_data
-        else:
-            return "No play-by-play data available."
+        pbp = playbyplay.PlayByPlay(game_id=game_id)
+        pbp_data = await pbp.get_data_frames()[0]
+
+        play_by_play_list = [
+            f"Period {play['PERIOD']} - {play['PCTIMESTRING']}: {play['HOMEDESCRIPTION'] or play['VISITORDESCRIPTION'] or 'No action described'}"
+            for index, play in pbp_data.iterrows()
+        ]
+
+        return "\n".join(play_by_play_list)
     except Exception as e:
-        return f"Error retrieving play-by-play: {str(e)}"
+        return f"Error retrieving play-by-play data: {str(e)}"
+async def fetch_ongoing_game_ids():
+    try:
+        board = scoreboard.ScoreBoard()
+        games = board.games.get_dict()
+        ongoing_games = []
+        now = datetime.now(tz=pytz.utc)
 
+        for game in games:
+            game_time_utc = parser.parse(game["gameTimeUTC"]).replace(tzinfo=pytz.utc)
+            game_end_time_utc = game_time_utc + timedelta(hours=3)
 
+            if game['gameStatus'] == 2 and now >= game_time_utc and now <= game_end_time_utc:
+                ongoing_games.append({
+                    "gameId": game["gameId"],
+                    "matchup": f"{game['awayTeam']['teamName']} vs {game['homeTeam']['teamName']}",
+                    "time": game_time_utc.astimezone(pytz.timezone('America/Los_Angeles')).strftime('%I:%M %p %Z')
+                })
+
+        return ongoing_games
+    except Exception as e:
+        return f"Error fetching ongoing games: {str(e)}"
 
 async def fetch_live_games():
     try:
         board = scoreboard.ScoreBoard()
-        
         games = board.games.get_dict()
         upcoming_games = []
         ongoing_games = []
