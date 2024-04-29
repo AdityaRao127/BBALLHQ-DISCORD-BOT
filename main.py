@@ -59,7 +59,7 @@ class OptionsDropdown(discord.ui.Select):
         elif self.values[0] == "Shot Chart":
                await interaction.response.send_modal(ShotChart())
         elif self.values[0] == "Machine Learning Prediction":
-            await interaction.response.send_message("This feature is coming soon!")
+            await interaction.response.send_message("This feature is coming soon! Try Player/Team Stats, Live Scores, Shot-Chart, or Latest News instead.")
         elif self.values[0] == "Latest News":
             await interaction.response.send_message("Fetching latest news...")
             feed_urls = [WOJ_FEED, SHAMS_FEED]  # will add more authors soon
