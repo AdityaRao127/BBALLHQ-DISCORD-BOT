@@ -5,6 +5,7 @@ import discord
 from stats import get_player_stats, get_team_stats 
 from shotchart import shot_map
 from discord.ui import View, Button
+from playbyplay import get_play_by_play, fetch_live_games, get_live_scores
 
 # Load the environment variable
 load_dotenv()
@@ -30,9 +31,16 @@ class OptionsDropdown(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "Live NBA Scores":
-           interaction.response.send_message("Unknown option selected, please try again.")
+            live_scores_text = await fetch_live_games()
+            await interaction.response.send_message(live_scores_text)
+        
         elif self.values[0] == "Play-by-play":
-           interaction.response.send_message("Unknown option selected, please try again.")
+            live_games_list = await fetch_live_games()
+            if live_games_list:
+                view = LiveGamesView(live_games_list)
+                await interaction.response.send_message("Select a game to see play-by-play:", view=view)
+            else:
+                await interaction.response.send_message("No live games available at the moment.")
         elif self.values[0] == "Player Stats":
              await interaction.response.send_modal(PlayerStats())
         elif self.values[0] == "Team Stats":
@@ -45,6 +53,7 @@ class OptionsDropdown(discord.ui.Select):
           interaction.response.send_message("Unknown option selected, please try again.")
         else:
             await interaction.response.send_message("Unknown option selected, please try again.")
+        
 
 # get inputs for the functions
 class PlayerStats(discord.ui.Modal, title="Player Stats"):
@@ -100,24 +109,37 @@ class ShotChart(discord.ui.Modal, title="Shot Chart"):
         view = ChartTypeView(self.player_chart_name.value)
         await interaction.followup.send("Select chart type:", view=view)
 
+class LiveGamesView(discord.ui.View):
+    def __init__(self, games):
+        super().__init__()
+        game_options = [discord.SelectOption(label=game["matchup"], value=str(game["gameId"])) for game in games]
+        self.add_item(discord.ui.Select(options=game_options, placeholder="Choose a game for play-by-play", min_values=1, max_values=1, custom_id="game_select"))
+
+    @discord.ui.select(custom_id="game_select")
+    async def select_game(self, interaction: discord.Interaction, select: discord.ui.Select):
+        game_id = select.values[0]
+        pbp_data = await get_play_by_play(game_id)
+        await interaction.response.send_message(f"Play-by-Play for Game {game_id}:\n{pbp_data}")
 
 class DropdownView(discord.ui.View):
     def __init__(self):
         super().__init__()
         self.add_item(OptionsDropdown())
+
 @bot.command()
 async def dropdown(ctx):
     """Sends a message with a dropdown."""
     await ctx.send('Please select an option:', view=DropdownView())
 
 @bot.command()
-async def nba(ctx):
-    """Sends a message with a dropdown."""
-    await ctx.send('Please select an option:', view=DropdownView())
-
-@bot.command()
 async def hi(ctx):
-    await ctx.send('Hello, I an NBA bot. Type !nba to get started!')
+    """Greet users and provide instructions."""
+    await ctx.send('Hello, I am an NBA bot. Type !dropdown to get started!')
+
+# Event to confirm the bot is online
+@bot.event
+async def on_ready():
+    print(f'{bot.user.name} has connected to Discord!')
     
 
 
