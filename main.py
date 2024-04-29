@@ -33,6 +33,7 @@ class OptionsDropdown(discord.ui.Select):
             discord.SelectOption(label = 'Play-by-play', description='NBA play-by-play of the game 📢'),
             discord.SelectOption(label='Player Stats', description='Player stats📊'),
             discord.SelectOption(label ='Team Stats', description='Team_stats📊'),
+            discord.SelectOption(label='Injury Report', description='Latest injury report of teams 🚑'),
             discord.SelectOption(label ='Shot Chart', description='Shot chart of players and teams 📈'),
             discord.SelectOption(label='Machine Learning Prediction', description='Simple ML-based predictions of a game🤖'),
             discord.SelectOption(label='Latest News', description='Reliable news sources 📰'),
@@ -56,6 +57,8 @@ class OptionsDropdown(discord.ui.Select):
              await interaction.response.send_modal(PlayerStats())
         elif self.values[0] == "Team Stats":
              await interaction.response.send_modal(TeamStats())
+        elif self.values[0] == "Injury Report":
+            await interaction.response.send_message("This feature is coming soon! Try Player/Team Stats, Live Scores, Shot-Chart, or Latest News instead.")
         elif self.values[0] == "Shot Chart":
                await interaction.response.send_modal(ShotChart())
         elif self.values[0] == "Machine Learning Prediction":
