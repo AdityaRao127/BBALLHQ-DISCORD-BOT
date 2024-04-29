@@ -6,11 +6,22 @@ from stats import get_player_stats, get_team_stats
 from shotchart import shot_map
 from discord.ui import View, Button
 from playbyplay import get_play_by_play, fetch_live_games, fetch_ongoing_game_ids
+from news import fetch_feed
+from discord.ext import commands 
+import schedule 
+import time
+import asyncio
+import feedparser
+import re
 
 # Load the environment variable
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+CHANNEL = os.getenv('DISCORD_CHANNEL')
+WOJ_FEED = os.getenv('DISCORD_WOJ_TWEETS')
+SHAMS_FEED = os.getenv('DISCORD_SHAMS_TWEETS')
 
+FEED_URLS = ['WOJ_FEED', 'SHAMS_FEED']
 # Initialize the bot
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
@@ -48,13 +59,65 @@ class OptionsDropdown(discord.ui.Select):
         elif self.values[0] == "Shot Chart":
                await interaction.response.send_modal(ShotChart())
         elif self.values[0] == "Machine Learning Prediction":
-            interaction.response.send_message("Unknown option selected, please try again.")
+            await interaction.response.send_message("This feature is coming soon!")
         elif self.values[0] == "Latest News":
-          interaction.response.send_message("Unknown option selected, please try again.")
-        else:
-            await interaction.response.send_message("Unknown option selected, please try again.")
-        
+            await interaction.response.send_message("Fetching latest news...")
+            feed_urls = [WOJ_FEED, SHAMS_FEED]  # will add more authors soon
+            updates = fetch_feed(feed_urls)
 
+            if updates:
+                woj_updates = updates[0]
+                shams_updates = updates[1]
+
+                woj_message = "Woj's Latest Updates:\n"
+                for update in woj_updates[:3]:  # 3 woj latest tweets
+                    woj_message += f"**Tweet Content**:\n{update['content']}\n\nAuthor: {update['author']}\nDate and time: {update['published']}\n\n"
+
+                shams_message = "Shams' Latest Updates:\n"
+                for update in shams_updates[:3]:  # 3 shams latest tweets
+                    shams_message += f"**Tweet Content**:\n{update['content']}\n\nAuthor: {update['author']}\nDate and time: {update['published']}\n\n"
+
+                await interaction.followup.send(woj_message)
+                await interaction.followup.send(shams_message)
+
+            else:
+                await interaction.response.send_message("Unknown option selected, please try again.")
+
+
+#auto check every 10 min
+async def run_bot():
+    await bot.start(TOKEN)
+    schedule.every(10).minutes.do(check_feed)
+    while True:
+        schedule.run_pending()
+        await asyncio.sleep(1)
+
+
+#auto post tweets from accounts
+async def check_feed():
+    feed_urls = [WOJ_FEED, SHAMS_FEED]
+    updates = fetch_feed(feed_urls)
+    for feed_updates in updates:
+        for update in feed_updates:  # Post all updates from each feed
+            message = f"**Tweet Content**:\n{update['content']}\n\nAuthor: {update['author']}\nDate and time: {update['published']}"
+            print("Found tweet")
+            channel = bot.get_channel(CHANNEL)
+            await channel.send(message)
+    else:
+        channel = bot.get_channel(CHANNEL)
+        await channel.send("No new updates found.")
+# manual news tweets 
+@bot.command()
+async def latest_news(ctx):
+    feed_urls = ['WOJ_FEED', 'SHAMS_FEED'] 
+    updates = fetch_feed(feed_urls)
+    for feed_updates in updates:
+        for update in feed_updates[:3]:  # latest 3 updates
+            message = f"Author: {update['author']}\nTweet content:\n{update['content']}"
+            await ctx.send(message)
+    else:
+        await ctx.send("No new updates found.")
+        
 # get inputs for the functions
 class PlayerStats(discord.ui.Modal, title="Player Stats"):
     # Text input for player name
@@ -158,3 +221,5 @@ async def on_ready():
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
 bot.run(TOKEN)
+
+
