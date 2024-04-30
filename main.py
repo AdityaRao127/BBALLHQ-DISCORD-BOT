@@ -14,6 +14,10 @@ import asyncio
 import feedparser
 import re
 import asyncio
+import os
+from keep_alive import keep_alive
+keep_alive()
+
 # Load the environment variable
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -240,7 +244,6 @@ async def hi(ctx):
 # Event to confirm the bot is online
 @bot.event
 async def on_ready():
-    print(f'{bot.user.name} has connected to Discord!')
-bot.run(TOKEN)
+    bot.run(os.environ.get('DISCORD_TOKEN'))
 
 
