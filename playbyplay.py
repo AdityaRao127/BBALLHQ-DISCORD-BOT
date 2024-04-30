@@ -99,12 +99,12 @@ async def fetch_live_games():
 
         if ongoing_games or finished_games or upcoming_games:
             # append to results
+            if upcoming_games:
+                summary += "⏰ Upcoming games ⏰\n" + "\n".join(upcoming_games) + "\n"
             if ongoing_games:
                 summary += "🏀 Ongoing games 🏀\n" + "\n".join(ongoing_games) + "\n"
             if finished_games:
                 summary += "✅ Completed games ✅\n" + "\n".join(finished_games) + "\n"
-            if upcoming_games:
-                summary += "⏰ Upcoming games ⏰\n" + "\n".join(upcoming_games) + "\n"
         else:
             summary += "\nNo games today.\n"
         
