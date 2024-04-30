@@ -234,11 +234,7 @@ async def hi(ctx):
     """Greet users and provide instructions."""
     await ctx.send('Hello, I am an NBA bot. Type !dropdown to get started!')
 
-# Event to confirm the bot is online
-@bot.event
-async def on_ready():
-    print(f'{bot.user.name} has connected to Discord!')
-    
+
 
 
 # Event to confirm the bot is online
