@@ -6,20 +6,37 @@ import pytz
 from nba_api.live.nba.endpoints import boxscore
 from nba_api.live.nba.endpoints import playbyplay
 from nba_api.stats.static import players
+import asyncio 
 
-async def get_play_by_play(game_id):
+async def get_play_by_play(game_id, last_action_number=0):
     try:
-        pbp = playbyplay.PlayByPlay(game_id=game_id)
-        pbp_data = await pbp.get_data_frames()[0]
+        print(f"Getting play-by-play data for game {game_id}...")
+        loop = asyncio.get_running_loop()
+        pbp = await loop.run_in_executor(None, playbyplay.PlayByPlay, game_id)
+        actions = await loop.run_in_executor(None, pbp.get_dict)
+        actions = actions['game']['actions']
 
-        play_by_play_list = [
-            f"Period {play['PERIOD']} - {play['PCTIMESTRING']}: {play['HOMEDESCRIPTION'] or play['VISITORDESCRIPTION'] or 'No action described'}"
-            for index, play in pbp_data.iterrows()
-        ]
+        new_actions = [action for action in actions if action['actionNumber'] > last_action_number]
 
-        return "\n".join(play_by_play_list)
+        play_by_play_list = []
+        for action in new_actions:
+            player_name = ''
+            player = players.find_player_by_id(action['personId'])
+            if player is not None:
+                player_name = player['full_name']
+            play_by_play_dict = {
+                'actionNumber': action['actionNumber'],
+                'period': action['period'],
+                'clock': action['clock'],
+                'player_name': player_name,
+                'actionType': action['actionType']
+            }
+            play_by_play_list.append(play_by_play_dict)
+
+        return play_by_play_list
     except Exception as e:
-        return f"Error retrieving play-by-play data: {str(e)}"
+        print(f"Error retrieving play-by-play data: {e}")
+        return []
 async def fetch_ongoing_game_ids():
     try:
         board = scoreboard.ScoreBoard()
@@ -83,7 +100,7 @@ async def fetch_live_games():
                     minutes = int(clock_parts[0])
                     seconds = clock_parts[1].split('S')[0]
                     formatted_clock = f"{minutes}:{seconds}"
-                    ongoing_games.append(f"**{away_team} vs. {home_team}**\n`{current_period}Q` `{formatted_clock}`\nCurrent score: {away_team} `{away_score}` - `{home_score}` {home_team}\n")
+                    ongoing_games.append(f"**{away_team} vs. {home_team}**\n`Q{current_period}` `{formatted_clock}`\nCurrent score: {away_team} `{away_score}` - `{home_score}` {home_team}\n")
                 elif game_status == 3:  # Game is completed
                     if home_score > away_score:
                         winner = f"{home_team} win"

@@ -13,7 +13,7 @@ import time
 import asyncio
 import feedparser
 import re
-
+import asyncio
 # Load the environment variable
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -180,18 +180,40 @@ class ShotChart(discord.ui.Modal, title="Shot Chart"):
         view = ChartTypeView(self.player_chart_name.value)
         await interaction.followup.send("Select chart type:", view=view)
 
+
 class LiveGamesView(discord.ui.View):
     def __init__(self, ongoing_games):
         super().__init__()
-        game_options = [discord.SelectOption(label=f"{game['matchup']} @ {game['time']}", description="Click to view play-by-play", value=game["gameId"]) for game in ongoing_games]
-        self.add_item(discord.ui.Select(placeholder="Select a game for play-by-play details", options=game_options, custom_id="select_game"))
+        self.last_action_numbers = {}
+        for game in ongoing_games:
+            button = discord.ui.Button(label=f"{game['matchup']} @ {game['time']}",
+                                       style=discord.ButtonStyle.primary,
+                                       custom_id=f"game_{game['gameId']}")
+            button.callback = self.handle_button_click
+            self.add_item(button)
+            self.last_action_numbers[game['gameId']] = 0
 
-    @discord.ui.select(custom_id="select_game")
-    async def select_game(self, interaction: discord.Interaction, select: discord.ui.Select):
-        game_id = select.values[0]
-        pbp_data = await get_play_by_play(game_id)
-        await interaction.response.send_message(f"Play-by-Play for Game {game_id}:\n{pbp_data}")
+    async def handle_button_click(self, interaction: discord.Interaction):
+        game_id = interaction.data['custom_id'].split('_')[1]
+        last_action_number = self.last_action_numbers[game_id]
+        await interaction.response.defer(ephemeral=True)
 
+        try:
+            while True:
+                plays = await get_play_by_play(game_id, last_action_number)
+                if plays:
+                    for play in plays:
+                        formatted_play = f"`{play['actionNumber']}` {play['period']}:{play['clock']} {play['player_name']} ({play['actionType']})"
+                        await interaction.followup.send(formatted_play)
+                    last_action_number = plays[-1]['actionNumber']
+                    self.last_action_numbers[game_id] = last_action_number
+                    await asyncio.sleep(10)
+                else:
+                    await asyncio.sleep(30)
+        except Exception as e:
+            print(f"Error during interaction: {e}")
+            await interaction.followup.send(f"Error: {str(e)}")
+            
 class DropdownView(discord.ui.View):
     def __init__(self):
         super().__init__()
