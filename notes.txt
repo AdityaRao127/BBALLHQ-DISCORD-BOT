@@ -9,6 +9,7 @@ GET https://api.balldontlie.io/v1/odds
 
 activate virtual environment: 
 venv\Scripts\activate
+deactivate
 
 - fix current day games, doesn't work around midnight properly
 - add injury report, possible rotowire/espn or pdf parse the nba official report
