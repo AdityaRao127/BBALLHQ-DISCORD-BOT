@@ -5,5 +5,10 @@ GET https://api.balldontlie.io/v1/odds
  balldontlie
  
  next to add: 
- - nba live game play-by-play 
- - no luck in getting tweet scrapers from nba reporters, will explore other options
+- test
+
+activate virtual environment: 
+venv\Scripts\activate
+
+- fix current day games, doesn't work around midnight properly
+- add injury report, possible rotowire/espn or pdf parse the nba official report
