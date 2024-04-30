@@ -1,11 +1,12 @@
-from nba_api.stats.endpoints import playbyplayv3
-from nba_api.stats.endpoints import scoreboardv2
+from nba_api.stats.endpoints import playbyplayv3, scoreboardv2
 from nba_api.live.nba.endpoints import scoreboard
 from datetime import datetime, timedelta
 from dateutil import parser, tz
 import pytz 
 from nba_api.live.nba.endpoints import boxscore
 from nba_api.live.nba.endpoints import playbyplay
+from nba_api.stats.static import players
+
 async def get_play_by_play(game_id):
     try:
         pbp = playbyplay.PlayByPlay(game_id=game_id)
@@ -69,32 +70,41 @@ async def fetch_live_games():
             time_display = game_time_ltz.strftime('%I:%M %p %Z')
 
             if game_date < today:  # Game is from yesterday or earlier
-                continue  # Skip games from previous days
+                continue  # Skip previous days
             elif game_date == today:  # Game is today
                 if game_status == 1:  # Game is upcoming
                     upcoming_games.append(f"**{away_team} vs. {home_team}** starts at {time_display}")
                 elif game_status == 2:  # Game is ongoing
-                    ongoing_games.append(f"**{away_team} vs. {home_team}** @ {time_display}\nCurrent score: {away_team} `{away_score}` - `{home_score}` {home_team}\n")
+                    pbp = playbyplay.PlayByPlay(game_id) #taken from demo
+                    actions = pbp.get_dict()['game']['actions']
+                    current_period = actions[-1]['period']
+                    current_clock = actions[-1]['clock']
+                    clock_parts = current_clock.split('T')[1].split('M')
+                    minutes = int(clock_parts[0])
+                    seconds = clock_parts[1].split('S')[0]
+                    formatted_clock = f"{minutes}:{seconds}"
+                    ongoing_games.append(f"**{away_team} vs. {home_team}**\n`{current_period}Q` `{formatted_clock}`\nCurrent score: {away_team} `{away_score}` - `{home_score}` {home_team}\n")
                 elif game_status == 3:  # Game is completed
                     if home_score > away_score:
                         winner = f"{home_team} win"
                     else:
                         winner = f"{away_team} win"
-                    finished_games.append(f"{away_team} vs. {home_team}\nScore: ||{away_score} - {home_score}, ***{winner}***||\n")
+                    finished_games.append(f"{away_team} vs. {home_team}\nScore: ||`{away_score} - {home_score}`, ***{winner}***||\n")
             else:  # Game is from tomorrow or later
-                pass  # You can add code here to handle future games if needed
+                pass  # implement later
 
         # Date formatting
-        formatted_date = today.strftime("%B %d")
-        summary = f"**NBA GAMES FOR {formatted_date} ({today.month}/{today.day})**\n"
+        formatted_date = f"{today.strftime('%B')} {ordinal(today.day)}"
+        summary = f"NBA Games on **{formatted_date}** ({today.month}/{today.day})\n""\n"
 
-        # Append each category to summary
-        if upcoming_games:
-            summary += "\n**Upcoming games:**\n" + "\n".join(upcoming_games) + "\n"
-        if ongoing_games:
-            summary += "\n**Ongoing games:**\n" + "\n".join(ongoing_games) + "\n"
-        if finished_games:
-            summary += "\n**Completed games:**\n" + "\n".join(finished_games) + "\n"
+        if ongoing_games or finished_games or upcoming_games:
+            # append to results
+            if ongoing_games:
+                summary += "🏀 Ongoing games 🏀\n" + "\n".join(ongoing_games) + "\n"
+            if finished_games:
+                summary += "✅ Completed games ✅\n" + "\n".join(finished_games) + "\n"
+            if upcoming_games:
+                summary += "⏰ Upcoming games ⏰\n" + "\n".join(upcoming_games) + "\n"
         else:
             summary += "\nNo games today.\n"
         
