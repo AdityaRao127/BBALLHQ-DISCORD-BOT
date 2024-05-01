@@ -244,6 +244,7 @@ async def hi(ctx):
 # Event to confirm the bot is online
 @bot.event
 async def on_ready():
-    bot.run(os.environ.get('DISCORD_TOKEN'))
+    bot.run(TOKEN)
+
 
 
