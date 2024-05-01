@@ -16,7 +16,7 @@ import re
 import asyncio
 import os
 from keep_alive import keep_alive
-keep_alive()
+
 
 # Load the environment variable
 load_dotenv()
@@ -238,13 +238,12 @@ async def hi(ctx):
     """Greet users and provide instructions."""
     await ctx.send('Hello, I am an NBA bot. Type !dropdown to get started!')
 
-
-
-
 # Event to confirm the bot is online
 @bot.event
 async def on_ready():
     bot.run(TOKEN)
+
+keep_alive()
 
 
 
