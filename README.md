@@ -10,10 +10,10 @@
 
 3. Activate virtual environment:
    #### Windows
-   .\venv\Scripts\activate
+   ```.\venv\Scripts\activate```
 
    #### macOS and Linux
-   source venv/bin/activate
+   ```source venv/bin/activate```
 
 4. Installing dependencies
    ```bash
