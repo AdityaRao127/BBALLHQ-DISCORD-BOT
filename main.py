@@ -250,5 +250,6 @@ def main():
     keep_alive()  # Start the Flask server
     bot.run(TOKEN)  # Start the Discord bot
     
-
+if __name__ == '__main__':
+    main()
 
