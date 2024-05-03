@@ -14,5 +14,4 @@ deactivate
 - fix current day games, doesn't work around midnight properly
 - add injury report, possible rotowire/espn or pdf parse the nba official report
 
-==> Port scan timeout reached, no open ports detected. Bind your service to at least one port. If you don't need to receive traffic on any port, create a background worker instead.
-==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+- add poetl game

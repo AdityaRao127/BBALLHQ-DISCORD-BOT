@@ -58,7 +58,8 @@ class OptionsDropdown(discord.ui.Select):
             else:
                 await interaction.response.send_message("No live games available at the moment.")
         elif self.values[0] == "Player Stats":
-             await interaction.response.send_modal(PlayerStats())
+             modal = PlayerStats(timeout=180.0)  
+             await interaction.response.send_modal(modal)
         elif self.values[0] == "Team Stats":
              await interaction.response.send_modal(TeamStats())
         elif self.values[0] == "Injury Report":
