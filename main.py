@@ -241,9 +241,17 @@ async def hi(ctx):
 
 
 
-# Event to confirm the bot is online
 @bot.event
 async def on_ready():
-    bot.run(os.environ.get('DISCORD_TOKEN'))
+    print(f'Logged in as {bot.user.name}')
+
+# Function to run the bot
+def main():
+    keep_alive()  # Start the Flask server
+    bot.run(TOKEN)  # Start the Discord bot
+    
+
+if __name__ == '__main__':
+    main()
 
 
