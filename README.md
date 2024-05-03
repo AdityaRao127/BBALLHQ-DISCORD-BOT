@@ -1,6 +1,6 @@
 # BASKETBALL DISCORD BOT
 
-<iframe width="560" height="315" src="INSERT DEMO VIDEO" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 
 
 
