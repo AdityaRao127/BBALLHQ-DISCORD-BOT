@@ -4,6 +4,6 @@
 __pycache__/
 *pyc
 README.md
-Dockerfile
+#Dockerfile
 LICENSE
 venv/
