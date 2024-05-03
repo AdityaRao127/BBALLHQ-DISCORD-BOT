@@ -251,7 +251,4 @@ def main():
     bot.run(TOKEN)  # Start the Discord bot
     
 
-if __name__ == '__main__':
-    main()
-
 
