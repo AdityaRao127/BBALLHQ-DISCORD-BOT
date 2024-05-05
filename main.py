@@ -10,13 +10,11 @@ from news import fetch_feed
 from discord.ext import commands 
 import schedule 
 import time
-import asyncio
 import feedparser
 import re
-import asyncio
 import os
 from keep_alive import keep_alive
-keep_alive()
+
 
 # Load the environment variable
 load_dotenv()
@@ -29,6 +27,7 @@ FEED_URLS = ['WOJ_FEED', 'SHAMS_FEED']
 # Initialize the bot
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
+keep_alive()
 
 class OptionsDropdown(discord.ui.Select):
     def __init__(self):
@@ -93,12 +92,12 @@ class OptionsDropdown(discord.ui.Select):
 
 
 #auto check every 10 min
-async def run_bot():
-    await bot.start(TOKEN)
-    schedule.every(10).minutes.do(check_feed)
-    while True:
-        schedule.run_pending()
-        await asyncio.sleep(1)
+#async def run_bot():
+ #   await bot.start(TOKEN)
+   # schedule.every(10).minutes.do(check_feed)
+   # while True:
+    #    schedule.run_pending()
+      #  await asyncio.sleep(1) 
 
 
 #auto post tweets from accounts
@@ -212,9 +211,10 @@ class LiveGamesView(discord.ui.View):
                         await interaction.followup.send(formatted_play)
                     last_action_number = plays[-1]['actionNumber']
                     self.last_action_numbers[game_id] = last_action_number
-                    await asyncio.sleep(10)
+                    #await asyncio.sleep(10)
                 else:
-                    await asyncio.sleep(30)
+                    pass
+                    #await asyncio.sleep(30)
         except Exception as e:
             print(f"Error during interaction: {e}")
             await interaction.followup.send(f"Error: {str(e)}")
@@ -245,12 +245,7 @@ async def hi(ctx):
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
-
-# Function to run the bot
-def main():
-    keep_alive()  # Start the Flask server
-    bot.run(TOKEN)  # Start the Discord bot
     
-if __name__ == '__main__':
-    main()
+
+bot.run(TOKEN)
 
