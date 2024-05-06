@@ -14,6 +14,7 @@ import feedparser
 import re
 import os
 from keep_alive import keep_alive
+import asyncio
 
 
 # Load the environment variable
@@ -25,7 +26,7 @@ SHAMS_FEED = os.getenv('DISCORD_SHAMS_TWEETS')
 
 FEED_URLS = ['WOJ_FEED', 'SHAMS_FEED']
 # Initialize the bot
-bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
+bot = commands.Bot(command_prefix='!', intents=discord.Intents.all(), hearbeat_timeout=60)
 
 keep_alive()
 

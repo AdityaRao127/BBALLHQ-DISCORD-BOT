@@ -3,6 +3,8 @@ from nba_api.stats.static import teams
 from nba_api.stats.endpoints import playercareerstats, playerdashboardbyyearoveryear, teamgamelog, teamdashboardbygeneralsplits, teamdashboardbyshootingsplits
 import datetime as dt
 import pandas as pd
+import asyncio
+import time
 current_year = dt.datetime.now().year
 if dt.datetime.now().month < 10:
     current_year = current_year - 1
@@ -20,6 +22,7 @@ async def get_player_stats(player_name):
         advanced_stats = playerdashboardbyyearoveryear.PlayerDashboardByYearOverYear(player_id=player_id)
         advanced_df = advanced_stats.get_data_frames()[1]
         
+        time.sleep(0.600)
         latest_season_reg = career_df.iloc[-1]
 
         latest_season_advanced = advanced_df.iloc[-1]
@@ -62,6 +65,8 @@ async def get_team_stats(team_name):
         # Fetch team dashboard stats
         team_stats = teamdashboardbygeneralsplits.TeamDashboardByGeneralSplits(team_id=team_id)
         team_ranks = teamdashboardbyshootingsplits.TeamDashboardByShootingSplits(team_id=team_id)
+        
+        time.sleep(0.600)
         team_df = team_stats.get_data_frames()[0]  # Assuming first DataFrame contains seasonal stats
        # other_df = team_ranks.get_data_frames()[0]
         
@@ -73,7 +78,7 @@ async def get_team_stats(team_name):
             "Free Throw Percentage": round(team_df['FT_PCT'][0] * 100, 1),
             "Three-Point Percentage": round(team_df['FG3_PCT'][0] * 100, 1),
         }
-
+        
         stats_message = (
             f"**{team_name.title()} Regular Season Stats for {current_year}-{current_year+1} Season**\n"
             f"Wins: {stats['Wins']}\n"
