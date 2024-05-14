@@ -72,4 +72,4 @@
 
 
 ###**Check out my GitHub Profile!**
-[![GitHub Profile](https://github.com/AdityaRao127)](https://github.com/AdityaRao127)
+[![GitHub Profile](https://github.com/AdityaRao127.png)](https://github.com/AdityaRao127)
