@@ -23,7 +23,7 @@
 ### Latest News
 ![Latest News](images/twitter_news.jpg)
 
-**Want to Contribute?**
+## Contributions are welcome! Here's how to contribute:
 
 1. Clone the repository:
    ```bash
@@ -44,7 +44,17 @@
    ```bash
    pip install -r requirements.txt
 
-5. Running and testing the bot
+5. Setting Up a Test Discord Bot
+
+   To contribute to the bot's development without the production bot token, you should set up a test Discord bot:
+   
+   1. Go to the [Discord Developer Portal](https://discord.com/developers/applications).
+   2. Create a new application and name it (ex: testbot) 
+   3. Under the "Bot" tab, click "Add Bot".
+   4. You will see a token under the bot username, click "Copy" to get your test bot token.
+   5. Use this token in your local `.env` file:
+
+5. Running and Testing the Bot
 
    #### Reference the [.env.example](.env.example) file at the top
    
@@ -55,16 +65,8 @@
    DISCORD_WOJ_TWEETS = Contact me for RSS FEED
    DISCORD_SHAMS_TWEETS = Contact me for RSS Feed
 
+   To **start the bot**, simply run the `main.py` file. The bot will appear online and start functioning as expected.
+   To **stop the bot,** press `Ctrl + C` in the terminal or close the terminal window.
+
 6. Check out [notes.txt](notes.txt) for ideas in development! Suggest new ones in [Issues](https://github.com/AdityaRao127/discordbot/issues)
-
-### Setting Up a Test Discord Bot
-
-To contribute to the bot's development without the production bot token, you should set up a test Discord bot:
-
-1. Go to the [Discord Developer Portal](https://discord.com/developers/applications).
-2. Create a new application and name it (ex: testbot) 
-3. Under the "Bot" tab, click "Add Bot".
-4. You will see a token under the bot username, click "Copy" to get your test bot token.
-5. Use this token in your local `.env` file:
-   
    
