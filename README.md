@@ -23,7 +23,7 @@
 ### Latest News
 ![Latest News](images/twitter_news.jpg)
 
-
+**Want to Contribute?**
 
 1. Clone the repository:
    ```bash
@@ -54,6 +54,8 @@
    DISCORD_CHANNEL = discord_channel
    DISCORD_WOJ_TWEETS = Contact me for RSS FEED
    DISCORD_SHAMS_TWEETS = Contact me for RSS Feed
+
+6. Check out [notes.txt](notes.txt) for ideas in development! Suggest new ones in [Issues](https://github.com/AdityaRao127/discordbot/issues)
 
 ### Setting Up a Test Discord Bot
 
