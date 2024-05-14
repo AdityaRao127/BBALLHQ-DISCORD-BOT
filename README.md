@@ -71,5 +71,5 @@
 6. Check out [notes.txt](notes.txt) for ideas in development! Suggest new ones in [Issues](https://github.com/AdityaRao127/discordbot/issues)
 
 
-[![GitHub Profile](https://avatars.githubusercontent.com/u/AdityaRao127)](https://github.com/AdityaRao127)
-   
+###**Check out my GitHub Profile!**
+[![GitHub Profile](https://github.com/AdityaRao127)](https://github.com/AdityaRao127)
