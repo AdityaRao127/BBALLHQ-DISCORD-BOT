@@ -1,6 +1,27 @@
 # BASKETBALL DISCORD BOT
 
+## Features
 
+### Shot Chart
+![Shot Chart](images/shot_chart.jpg)
+
+### Play-by-play
+![Shot Chart](images/play_by_play.jpg)
+
+### Scoreboard Example 1
+![Shot Chart](images/upcoming_games.jpg)
+
+### Scoreboard Example 2
+![Shot Chart](images/current_games.jpg)
+
+### Player Stats
+![Shot Chart](images/player_stats.jpg)
+
+### Team Stats
+![Shot Chart](images/team_stats.jpg)
+
+### Latest News
+![Latest News](images/twitter_news.jpg)
 
 
 
@@ -40,8 +61,5 @@ To contribute to the bot's development without the production bot token, you sho
 3. Under the "Bot" tab, click "Add Bot".
 4. You will see a token under the bot username, click "Copy" to get your test bot token.
 5. Use this token in your local `.env` file:
-
-   ```plaintext
-   [1] DISCORD_TOKEN=your_test_discord_bot_token_here
    
    
