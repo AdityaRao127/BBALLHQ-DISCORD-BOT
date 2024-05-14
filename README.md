@@ -65,8 +65,11 @@
    DISCORD_WOJ_TWEETS = Contact me for RSS FEED
    DISCORD_SHAMS_TWEETS = Contact me for RSS Feed
 
-   To **start the bot**, simply run the `main.py` file. The bot will appear online and start functioning as expected.
-   To **stop the bot,** press `Ctrl + C` in the terminal or close the terminal window.
+   To **start the bot**, run the `main.py` file. The bot will appear online and start functioning as expected.
+   To **stop the bot,** press `Ctrl + C` in the terminal or close the python terminal window.
 
 6. Check out [notes.txt](notes.txt) for ideas in development! Suggest new ones in [Issues](https://github.com/AdityaRao127/discordbot/issues)
+
+
+[![GitHub Profile](https://github.com/AdityaRao127.png?size=120 "GitHub Profile")](https://github.com/AdityaRao127)
    
