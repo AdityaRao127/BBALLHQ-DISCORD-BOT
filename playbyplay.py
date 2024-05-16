@@ -8,7 +8,7 @@ from nba_api.live.nba.endpoints import playbyplay
 from nba_api.stats.static import players
 import asyncio 
 
-async def get_play_by_play(game_id, last_action_number=0):
+async def get_play_by_play(game_id, last_action_number=-1):
     try:
         print(f"Getting play-by-play data for game {game_id}...")
         loop = asyncio.get_running_loop()
@@ -16,27 +16,42 @@ async def get_play_by_play(game_id, last_action_number=0):
         actions = await loop.run_in_executor(None, pbp.get_dict)
         actions = actions['game']['actions']
 
+        # reverse order of actions, having most recent action at the top
+        actions = sorted(actions, key=lambda x: x['actionNumber'], reverse=True)
+
         new_actions = [action for action in actions if action['actionNumber'] > last_action_number]
-
-        play_by_play_list = []
-        for action in new_actions:
-            player_name = ''
-            player = players.find_player_by_id(action['personId'])
+        print([action['actionNumber'] for action in new_actions], last_action_number)
+        
+        if new_actions:
+            latest_action = new_actions[0]
+            player = players.find_player_by_id(latest_action['personId'])
             if player is not None:
-                player_name = player['full_name']
-            play_by_play_dict = {
-                'actionNumber': action['actionNumber'],
-                'period': action['period'],
-                'clock': action['clock'],
-                'player_name': player_name,
-                'actionType': action['actionType']
-            }
-            play_by_play_list.append(play_by_play_dict)
-
-        return play_by_play_list
+                play_by_play_dict = {
+                    'player': player['full_name'],
+                    'actionNumber': latest_action['actionNumber'],
+                    'period': latest_action['period'],
+                    'clock': latest_action['clock'],
+                    'actionType': latest_action['actionType'],
+                    'description': latest_action['description']
+                }
+            else:
+                play_by_play_dict = {
+                    'player': '',
+                    'actionNumber': latest_action['actionNumber'],
+                    'period': latest_action['period'],
+                    'clock': latest_action['clock'],
+                    'actionType': latest_action['actionType'],
+                    'description': latest_action['description']
+                }
+            last_action_number = latest_action['actionNumber']
+            return [play_by_play_dict], last_action_number
+        else:
+            return [], last_action_number
     except Exception as e:
         print(f"Error retrieving play-by-play data: {e}")
-        return []
+        return [], last_action_number
+
+    
 async def fetch_ongoing_game_ids():
     try:
         board = scoreboard.ScoreBoard()

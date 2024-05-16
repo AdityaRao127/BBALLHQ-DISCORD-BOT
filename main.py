@@ -14,6 +14,7 @@ import feedparser
 import re
 import os
 from keep_alive import keep_alive
+from datetime import datetime
 import asyncio
 
 
@@ -185,7 +186,6 @@ class ShotChart(discord.ui.Modal, title="Shot Chart"):
         view = ChartTypeView(self.player_chart_name.value)
         await interaction.followup.send("Select chart type:", view=view)
 
-
 class LiveGamesView(discord.ui.View):
     def __init__(self, ongoing_games):
         super().__init__()
@@ -196,30 +196,52 @@ class LiveGamesView(discord.ui.View):
                                        custom_id=f"game_{game['gameId']}")
             button.callback = self.handle_button_click
             self.add_item(button)
-            self.last_action_numbers[game['gameId']] = 0
+            self.last_action_numbers[game['gameId']] = -1
 
     async def handle_button_click(self, interaction: discord.Interaction):
         game_id = interaction.data['custom_id'].split('_')[1]
-        last_action_number = self.last_action_numbers[game_id]
+        last_action_number = self.last_action_numbers.get(game_id, -1)  # Initialize with -1
         await interaction.response.defer(ephemeral=True)
 
-        try:
-            while True:
-                plays = await get_play_by_play(game_id, last_action_number)
+        start_time = datetime.now()
+        game_ended = False
+
+        while True:
+            try:
+                plays, last_action_number = await get_play_by_play(game_id, last_action_number)
                 if plays:
-                    for play in plays:
-                        formatted_play = f"`{play['actionNumber']}` {play['period']}:{play['clock']} {play['player_name']} ({play['actionType']})"
+                    for play in reversed(plays):  # Iterate over plays in reverse order
+                        formatted_play = f"`{play['actionNumber']}` **{play['period']}:{play['clock']}** ({play['actionType']} {play['description']})"
                         await interaction.followup.send(formatted_play)
-                    last_action_number = plays[-1]['actionNumber']
                     self.last_action_numbers[game_id] = last_action_number
-                    #await asyncio.sleep(10)
+                elif not plays:
+                    # Check if 25 minutes have passed since the last play
+                    if (datetime.now() - start_time).total_seconds() / 60 > 25:
+                        await interaction.followup.send("No new plays in the last 25 minutes. Ending play-by-play.")
+                        break
                 else:
-                    pass
-                    #await asyncio.sleep(30)
-        except Exception as e:
-            print(f"Error during interaction: {e}")
-            await interaction.followup.send(f"Error: {str(e)}")
-            
+                    # Check if the game has ended
+                    live_games = await fetch_live_games()
+                    for game in live_games:
+                        if game['gameId'] == game_id and game['gameStatus'] == 3:
+                            if game['homeTeam']['score'] > game['awayTeam']['score']:
+                                winner = f"{game['homeTeam']['teamName']} win"
+                            else:
+                                winner = f"{game['awayTeam']['teamName']} win"
+                            await interaction.followup.send(f"Game ended! Final score: {game['awayTeam']['score']} - {game['homeTeam']['score']}, ***{winner}***")
+                            game_ended = True
+                            break
+
+                    if game_ended:
+                        break
+
+                    await asyncio.sleep(1.2)
+
+            except Exception as e:
+                print(f"Error during interaction: {e}")
+                await interaction.followup.send(f"Error: {str(e)}")
+                break
+                
 class DropdownView(discord.ui.View):
     def __init__(self):
         super().__init__()
