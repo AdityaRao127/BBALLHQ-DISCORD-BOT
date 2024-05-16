@@ -1,10 +1,10 @@
 # BASKETBALL DISCORD BOT
 
 ##Faster play-by-plays than ESPN Gamecast and NBA.com!
-![YouTube2](https://www.youtube.com/watch?v=HPZ1rw5ldzc)
+[![Play-by-play](https://img.youtube.com/vi/HPZ1rw5ldzc/0.jpg)](https://www.youtube.com/watch?v=HPZ1rw5ldzc)
 
 ## Other features:
-![YouTube](https://www.youtube.com/watch?v=Ptm2Ims7gDU)
+[![Play-by-play](https://img.youtube.com/vi/Ptm2Ims7gDU/0.jpg)](https://www.youtube.com/watch?v=Ptm2Ims7gDU)
 
 ## Features
 
