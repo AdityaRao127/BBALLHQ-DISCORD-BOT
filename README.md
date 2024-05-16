@@ -1,6 +1,6 @@
 # BASKETBALL DISCORD BOT
 
-##Faster play-by-plays than ESPN Gamecast and NBA.com!
+## Faster play-by-plays than ESPN Gamecast and NBA.com!
 https://github.com/AdityaRao127/BBALLHQ-DISCORD-BOT/assets/142644352/5e9fc2d2-d302-4972-ac85-fbaa1e1faf1c
 
 
