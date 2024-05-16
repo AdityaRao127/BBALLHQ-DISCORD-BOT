@@ -1,5 +1,12 @@
 # BASKETBALL DISCORD BOT
 
+##Faster play-by-plays than ESPN Gamecast and NBA.com!
+<iframe width="640" height="480" src="https://www.youtube.com/watch?v=HPZ1rw5ldzc" frameborder="0" allowfullscreen></iframe>
+
+
+## Other features:
+<iframe width="640" height="480" src="https://www.youtube.com/watch?v=Ptm2Ims7gDU" frameborder="0" allowfullscreen></iframe>
+
 ## Features
 
 ### Shot Chart
