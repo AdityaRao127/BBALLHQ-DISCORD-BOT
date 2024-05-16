@@ -235,7 +235,7 @@ class LiveGamesView(discord.ui.View):
                     if game_ended:
                         break
 
-                    await asyncio.sleep(1.2)
+                    await asyncio.sleep(0.1)
 
             except Exception as e:
                 print(f"Error during interaction: {e}")
