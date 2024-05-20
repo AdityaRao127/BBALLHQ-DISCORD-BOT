@@ -1,3 +1,4 @@
+import discord
 from nba_api.stats.static import players
 from nba_api.stats.static import teams
 from nba_api.stats.endpoints import playercareerstats, playerdashboardbyyearoveryear, teamgamelog, teamdashboardbygeneralsplits, teamdashboardbyshootingsplits
@@ -5,6 +6,7 @@ import datetime as dt
 import pandas as pd
 import asyncio
 import time
+from discord.ext import commands
 current_year = dt.datetime.now().year
 if dt.datetime.now().month < 10:
     current_year = current_year - 1
@@ -17,44 +19,56 @@ async def get_player_stats(player_name):
         player_id = player[0]['id']
         career = playercareerstats.PlayerCareerStats(player_id=player_id)
         career_df = career.get_data_frames()[0]
-        
+
         # Fetch advanced stats
         advanced_stats = playerdashboardbyyearoveryear.PlayerDashboardByYearOverYear(player_id=player_id)
         advanced_df = advanced_stats.get_data_frames()[1]
-        
+
         time.sleep(0.600)
         latest_season_reg = career_df.iloc[-1]
-
         latest_season_advanced = advanced_df.iloc[-1]
 
-        # Prepare structured regular stats data
-        regular_stats_message = (
-            f"**Regular Season Stats for {player_name.title()}, {current_year}-{current_year+1}**\n"
-            f"Points Per Game : {latest_season_reg['PTS'] / latest_season_reg['GP']:.1f}\n"
-            f"Assists Per Game: {latest_season_reg['AST'] / latest_season_reg['GP']:.1f}\n"
-            f"Rebounds Per Game: {latest_season_reg['REB'] / latest_season_reg['GP']:.1f}\n"
-            f"Steals Per Game: {latest_season_reg['STL'] / latest_season_reg['GP']:.1f}\n"
-            f"Blocks Per Game: {latest_season_reg['BLK'] / latest_season_reg['GP']:.1f}\n"
-            f"\n"
-            f"**Shooting Percentages**\n"
-            f"Field Goal Percentage: {latest_season_reg['FG_PCT'] * 100:.3f}%\n"
-            f"Free Throw Percentage: {latest_season_reg['FT_PCT'] * 100:.3f}%\n"
-            f"Three-Point Percentage: {latest_season_reg['FG3_PCT'] * 100:.3f}%\n"
+        # Create a Discord embed
+        embed = discord.Embed(
+            title=f"**{player_name.title()}**",
+            color=0x0099ff  # Blue color
         )
 
-        # Prepare structured advanced stats data
-        advanced_stats_message = (
-            f"**Other Stats**\n"
-            f"Turnovers Per Game: {latest_season_reg['TOV']}\n"
-            f"Win Shares: {latest_season_advanced['W']}\n"
-            f"Offensive Rebounds Per Game: {latest_season_advanced['OREB']}\n"
-            f"Plus/Minus (Season): {latest_season_advanced['PLUS_MINUS']}\n"
-        )
+        # Add author, thumbnail, fields, and footer to the embed
+        embed.set_author(name="NBA Stats Bot", icon_url="https://i.imgur.com/axLm3p6.jpeg")
+        embed.set_thumbnail(url="https://cdn.nba.com/headshots/nba/latest/1040x760/{player_id}.png") #fix
 
-        return regular_stats_message + "\n" + advanced_stats_message
+        # Extract season year
+        season_id_parts = latest_season_reg['SEASON_ID'].split('-')
+        season_year = int(season_id_parts[1]) + 1
+        embed.description = f"**Regular Season Stats for {player_name.title()}, {season_id_parts[0]}-{season_year}**"
+
+        # Add regular season stats fields
+        embed.add_field(name="Points Per Game", value=f"{latest_season_reg['PTS'] / latest_season_reg['GP']:.1f}", inline=False)
+        embed.add_field(name="Assists Per Game", value=f"{latest_season_reg['AST'] / latest_season_reg['GP']:.1f}", inline=False)
+        embed.add_field(name="Rebounds Per Game", value=f"{latest_season_reg['REB'] / latest_season_reg['GP']:.1f}", inline=False)
+        embed.add_field(name="Steals Per Game", value=f"{latest_season_reg['STL'] / latest_season_reg['GP']:.1f}", inline=False)
+        embed.add_field(name="Blocks Per Game", value=f"{latest_season_reg['BLK'] / latest_season_reg['GP']:.1f}", inline=False)
+
+        # Add shooting percentages field
+        embed.add_field(name="Shooting Percentages", value=f"FG%: {latest_season_reg['FG_PCT'] * 100:.3f}%\nFT%: {latest_season_reg['FT_PCT'] * 100:.3f}%\n3P%: {latest_season_reg['FG3_PCT'] * 100:.3f}%", inline=False)
+
+        # Add advanced stats fields
+        embed.add_field(name="Turnovers Per Game", value=f"{latest_season_reg['TOV']}", inline=False)
+        embed.add_field(name="Win Shares", value=f"{latest_season_advanced['W']}", inline=False)
+        embed.add_field(name="Offensive Rebounds Per Game", value=f"{latest_season_advanced['OREB']}", inline=False)
+        embed.add_field(name="Plus/Minus (Season)", value=f"{latest_season_advanced['PLUS_MINUS']}", inline=False)
+
+        #embed.set_footer(text="Data provided by NBA API")
+
+        return embed
     else:
-        return "Spell the player's name correctly"
-    
+        embed = discord.Embed(
+            title="Error",
+            description="Spell the player's name correctly",
+            color=0xff0000  # Red color
+        )
+        return embed
 async def get_team_stats(team_name):
     # Find team by name
     team_dict = teams.get_teams()

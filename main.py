@@ -127,19 +127,15 @@ async def latest_news(ctx):
     else:
         await ctx.send("No new updates found.")
         
-# get inputs for the functions
 class PlayerStats(discord.ui.Modal, title="Player Stats"):
-    # Text input for player name
     player_name = discord.ui.TextInput(label="Enter the NBA player's name:", style=discord.TextStyle.short)
 
     async def on_submit(self, interaction: discord.Interaction):
         # Acknowledge the interaction
         await interaction.response.defer()
-
-        # Fetch player stats
         loading_player_message = await interaction.followup.send(f"Loading {self.player_name.value.title()} stats...")
-        player_stats = await get_player_stats(self.player_name.value)
-        await loading_player_message.edit(content=player_stats)
+        player_stats_embed = await get_player_stats(self.player_name.value)
+        await loading_player_message.edit(content=None, embed=player_stats_embed)
         
 class TeamStats(discord.ui.Modal, title="Team Stats"):
 

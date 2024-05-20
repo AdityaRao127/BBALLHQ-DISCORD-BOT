@@ -82,15 +82,17 @@ async def fetch_live_games():
         ongoing_games = []
         finished_games = []
         
-        # Current time
+        # Current time in Pacific timezone
+        pacific_tz = pytz.timezone('America/Los_Angeles')
         now = datetime.now(tz=pytz.utc)
-        today = now.astimezone(pytz.timezone('America/Los_Angeles')).date()
+        now_pacific = now.astimezone(pacific_tz)
+        today_date = now_pacific.date()
 
         for game in games:
-            # local timezone
+            # Game time in Pacific timezone
             game_time_utc = parser.parse(game["gameTimeUTC"]).replace(tzinfo=pytz.utc)
-            game_time_ltz = game_time_utc.astimezone(pytz.timezone('America/Los_Angeles'))
-            game_date = game_time_ltz.date()
+            game_time_pst = game_time_utc.astimezone(pacific_tz)
+            game_date = game_time_pst.date()
 
             home_team = game['homeTeam']['teamName']
             away_team = game['awayTeam']['teamName']
@@ -99,15 +101,15 @@ async def fetch_live_games():
             game_status = game['gameStatus']
             game_id = game['gameId']
 
-            time_display = game_time_ltz.strftime('%I:%M %p %Z')
+            time_display = game_time_pst.strftime('%I:%M %p %Z')
 
-            if game_date < today:  # Game is from yesterday or earlier
+            if game_date < today_date:  # Game is from yesterday or earlier
                 continue  # Skip previous days
-            elif game_date == today:  # Game is today
+            elif game_date == today_date:  # Game is today
                 if game_status == 1:  # Game is upcoming
                     upcoming_games.append(f"**{away_team} vs. {home_team}** starts at {time_display}")
                 elif game_status == 2:  # Game is ongoing
-                    pbp = playbyplay.PlayByPlay(game_id) #taken from demo
+                    pbp = playbyplay.PlayByPlay(game_id)
                     actions = pbp.get_dict()['game']['actions']
                     current_period = actions[-1]['period']
                     current_clock = actions[-1]['clock']
@@ -126,8 +128,8 @@ async def fetch_live_games():
                 pass  # implement later
 
         # Date formatting
-        formatted_date = f"{today.strftime('%B')} {ordinal(today.day)}"
-        summary = f"NBA Games on **{formatted_date}** ({today.month}/{today.day})\n""\n"
+        formatted_date = f"{today_date.strftime('%B')} {ordinal(today_date.day)}"
+        summary = f"NBA Games on **{formatted_date}** ({today_date.month}/{today_date.day})\n""\n"
 
         if ongoing_games or finished_games or upcoming_games:
             # append to results
