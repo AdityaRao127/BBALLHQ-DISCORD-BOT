@@ -9,25 +9,6 @@ import numpy as np
 import seaborn as sns
 import tempfile
 import os
-from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
-import requests
-
-current_year = dt.datetime.now().year
-if dt.datetime.now().month < 10:
-    current_year = current_year - 1
-
-custom_headers = {
-    'Host': 'stats.nba.com',
-    'Connection': 'keep-alive',
-    'Cache-Control': 'max-age=0',
-    'Upgrade-Insecure-Requests': '1',
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Accept-Language': 'en-US,en;q=0.9',
-}
-
-timeout = 100  # Timeout in seconds
 
 current_year = dt.datetime.now().year
 if dt.datetime.now().month < 10:
