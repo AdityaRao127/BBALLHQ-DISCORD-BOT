@@ -16,6 +16,7 @@ import os
 from keep_alive import keep_alive
 from datetime import datetime
 import asyncio
+import tempfile
 
 
 # Load the environment variable
@@ -39,7 +40,7 @@ class OptionsDropdown(discord.ui.Select):
             discord.SelectOption(label='Player Stats', description='Player stats📊'),
             discord.SelectOption(label ='Team Stats', description='Team_stats📊'),
             discord.SelectOption(label='Injury Report', description='Latest injury report of teams 🚑'),
-            discord.SelectOption(label ='Shot Chart', description='Shot chart of players and teams 📈'),
+            discord.SelectOption(label ='Shot Chart', description='Shot chart of players 2023-24 season 📈'),
             discord.SelectOption(label='Machine Learning Prediction', description='Simple ML-based predictions of a game🤖'),
             discord.SelectOption(label='Latest News', description='Reliable news sources 📰'),
         
@@ -156,25 +157,24 @@ class ChartTypeView(discord.ui.View):
     @discord.ui.button(label="Regular Shot Chart", style=discord.ButtonStyle.primary)
     async def regular_chart_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
-        buffer, error = await shot_map(self.player_name, chart_type='regular')
-        if buffer:
-            await interaction.followup.send(file=discord.File(fp=buffer, filename='shot_chart.png'))
-        # go back to home or display charts again?
+        file_path, error = await shot_map(self.player_name, chart_type='regular')
+        if file_path:
+            await interaction.followup.send(file=discord.File(fp=file_path, filename='shot_chart.png'))
+            os.remove(file_path)
         else:
-            await interaction.followup.send("An error occurred: " + error)
+            await interaction.followup.send(f"An error occurred: {error}")
 
     @discord.ui.button(label="Heatmap Shot Chart", style=discord.ButtonStyle.danger)
     async def heatmap_chart_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
-        buffer, error = await shot_map(self.player_name, chart_type='heatmap')
-        if buffer:
-            await interaction.followup.send(file=discord.File(fp=buffer, filename='heatmap_chart.png'))
+        file_path, error = await shot_map(self.player_name, chart_type='heatmap')
+        if file_path:
+            await interaction.followup.send(file=discord.File(fp=file_path, filename='heatmap_chart.png'))
+            os.remove(file_path)
         else:
-            await interaction.followup.send("An error occurred: " + error)
-            
-        
+            await interaction.followup.send(f"An error occurred: {error}")
+
 class ShotChart(discord.ui.Modal, title="Shot Chart"):
-    # Text input for player name
     player_chart_name = discord.ui.TextInput(label="Enter the NBA player's name:")
 
     async def on_submit(self, interaction: discord.Interaction):
