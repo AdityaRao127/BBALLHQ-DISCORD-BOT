@@ -17,16 +17,16 @@ from keep_alive import keep_alive
 from datetime import datetime
 import asyncio
 import tempfile
+from playwright.sync_api import sync_playwright
+from bs4 import BeautifulSoup
+import pandas as pd
 
 
 # Load the environment variable
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL = os.getenv('DISCORD_CHANNEL')
-WOJ_FEED = os.getenv('DISCORD_WOJ_TWEETS')
-SHAMS_FEED = os.getenv('DISCORD_SHAMS_TWEETS')
 
-FEED_URLS = ['WOJ_FEED', 'SHAMS_FEED']
 # Initialize the bot
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all(), hearbeat_timeout=60)
 
@@ -37,6 +37,7 @@ class OptionsDropdown(discord.ui.Select):
         options=[
             discord.SelectOption(label='Live NBA Scores', description='Live scores from nba games 🏀'),
             discord.SelectOption(label = 'Play-by-play', description='NBA play-by-play of the game 📢'),
+            discord.SelectOption(label='Watch Games', description='Watch live 📺'),
             discord.SelectOption(label='Player Stats', description='Player stats📊'),
             discord.SelectOption(label ='Team Stats', description='Team_stats📊'),
             discord.SelectOption(label='Injury Report', description='Latest injury report of teams 🚑'),
@@ -59,6 +60,8 @@ class OptionsDropdown(discord.ui.Select):
                 await interaction.response.send_message("Select a game to view play-by-play details:", view=view)
             else:
                 await interaction.response.send_message("No live games available at the moment.")
+        elif self.values[0] == "Watch Games":
+            pass
         elif self.values[0] == "Player Stats":
              modal = PlayerStats(timeout=180.0)  
              await interaction.response.send_modal(modal)
@@ -71,62 +74,62 @@ class OptionsDropdown(discord.ui.Select):
         elif self.values[0] == "Machine Learning Prediction":
             await interaction.response.send_message("This feature is coming soon! Try Player/Team Stats, Live Scores, Shot-Chart, or Latest News instead.")
         elif self.values[0] == "Latest News":
-            await interaction.response.send_message("Fetching latest news...")
-            feed_urls = [WOJ_FEED, SHAMS_FEED]  # will add more authors soon
-            updates = fetch_feed(feed_urls)
+            await interaction.response.defer()
+            await interaction.followup.send("Fetching latest news...")
 
-            if updates:
-                woj_updates = updates[0]
-                shams_updates = updates[1]
+            try:
+                shams_tweets = await fetch_popular_tweets('ShamsCharania', total_scrolls=5)
+                if shams_tweets:
+                    shams_message = "Shams' Latest Updates:\n"
+                    for tweet in shams_tweets[:3]:  #latest 3 tweets
+                        shams_message += f"**Tweet Content**:\n{tweet['content']}\n\nAuthor: {tweet['author']}\nRelevancy: {tweet['published']}\n\n"
+                    await interaction.followup.send(shams_message)
+                else:
+                    await interaction.followup.send("No new updates found.")
+            except Exception as e:
+                await interaction.followup.send(f"An error occurred while fetching tweets: {str(e)}")
 
-                woj_message = "Woj's Latest Updates:\n"
-                for update in woj_updates[:3]:  # 3 woj latest tweets
-                    woj_message += f"**Tweet Content**:\n{update['content']}\n\nAuthor: {update['author']}\nDate and time: {update['published']}\n\n"
+async def fetch_popular_tweets(username, total_scrolls=10):
+    link = f"https://x.com/{username}"
+    data = []
 
-                shams_message = "Shams' Latest Updates:\n"
-                for update in shams_updates[:3]:  # 3 shams latest tweets
-                    shams_message += f"**Tweet Content**:\n{update['content']}\n\nAuthor: {update['author']}\nDate and time: {update['published']}\n\n"
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        await page.goto(link, timeout=500000)
 
-                await interaction.followup.send(woj_message)
-                await interaction.followup.send(shams_message)
+        initial_height = 0
+        final_height = 1000
+        for _ in range(total_scrolls):
+            await page.mouse.wheel(initial_height, final_height)
+            initial_height = final_height
+            final_height = final_height + 300
+            await asyncio.sleep(4)
+            content = await page.content()
+            soup = BeautifulSoup(content, 'html.parser')
+            all_posts = soup.find_all('div', {'data-testid': 'cellInnerDiv'})
 
-            else:
-                await interaction.response.send_message("Unknown option selected, please try again.")
+            for post in all_posts:
+                check_retweet = post.find('div', {'role': 'link'})
 
+                if check_retweet is None:
+                    tweet_element = post.find('div', {'data-testid': 'tweetText'})
+                    if tweet_element:
+                        tweet = tweet_element.get_text(strip=True)
 
-#auto check every 10 min
-#async def run_bot():
- #   await bot.start(TOKEN)
-   # schedule.every(10).minutes.do(check_feed)
-   # while True:
-    #    schedule.run_pending()
-      #  await asyncio.sleep(1) 
+                        data.append({
+                            'content': tweet,
+                            'author': username,
+                            'published': 'Popular Tweets'
+                        })
 
+        await browser.close()
 
-#auto post tweets from accounts
-async def check_feed():
-    feed_urls = [WOJ_FEED, SHAMS_FEED]
-    updates = fetch_feed(feed_urls)
-    for feed_updates in updates:
-        for update in feed_updates:  # Post all updates from each feed
-            message = f"**Tweet Content**:\n{update['content']}\n\nAuthor: {update['author']}\nDate and time: {update['published']}"
-            print("Found tweet")
-            channel = bot.get_channel(CHANNEL)
-            await channel.send(message)
-    else:
-        channel = bot.get_channel(CHANNEL)
-        await channel.send("No new updates found.")
-# manual news tweets 
-@bot.command()
-async def latest_news(ctx):
-    feed_urls = ['WOJ_FEED', 'SHAMS_FEED'] 
-    updates = fetch_feed(feed_urls)
-    for feed_updates in updates:
-        for update in feed_updates[:3]:  # latest 3 updates
-            message = f"Author: {update['author']}\nTweet content:\n{update['content']}"
-            await ctx.send(message)
-    else:
-        await ctx.send("No new updates found.")
+    df = pd.DataFrame(data)
+    df.drop_duplicates(inplace=True)
+    latest_tweets = df.to_dict('records')
+    return latest_tweets
+
         
 class PlayerStats(discord.ui.Modal, title="Player Stats"):
     player_name = discord.ui.TextInput(label="Enter the NBA player's name:", style=discord.TextStyle.short)
