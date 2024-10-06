@@ -20,6 +20,7 @@ import tempfile
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 import pandas as pd
+import aiohttp
 
 
 # Load the environment variable
@@ -31,6 +32,17 @@ CHANNEL = os.getenv('DISCORD_CHANNEL')
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all(), hearbeat_timeout=60)
 
 keep_alive()
+
+# Add this position map near the top of your file, after the imports
+POSITION_MAP = {
+    "PG": "Point Guard",
+    "SG": "Shooting Guard",
+    "SF": "Small Forward",
+    "PF": "Power Forward",
+    "C": "Center",
+    "G": "Guard",
+    "F": "Forward"
+}
 
 class OptionsDropdown(discord.ui.Select):
     def __init__(self):
@@ -68,7 +80,8 @@ class OptionsDropdown(discord.ui.Select):
         elif self.values[0] == "Team Stats":
              await interaction.response.send_modal(TeamStats())
         elif self.values[0] == "Injury Report":
-            await interaction.response.send_message("This feature is coming soon! Try Player/Team Stats, Live Scores, Shot-Chart, or Latest News instead.")
+            view = TeamSelectionView()
+            await interaction.response.send_message("Select a team to view their injury report:", view=view)
         elif self.values[0] == "Shot Chart":
                await interaction.response.send_modal(ShotChart())
         elif self.values[0] == "Machine Learning Prediction":
@@ -246,6 +259,92 @@ class DropdownView(discord.ui.View):
         super().__init__()
         self.add_item(OptionsDropdown())
 
+# Add this new class after the existing dropdown classes
+class TeamSelectionDropdown(discord.ui.Select):
+    def __init__(self, teams):
+        options = [discord.SelectOption(label=team, value=team) for team in teams]
+        super().__init__(placeholder="Select a team", options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        team = self.values[0]
+        injury_report_embed = await fetch_injury_report(team)
+        await interaction.followup.send(embed=injury_report_embed)
+
+class TeamSelectionView(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        all_teams = [
+            "Atlanta", "Boston", "Brooklyn", "Charlotte",
+            "Chicago", "Cleveland", "Dallas", "Denver",
+            "Detroit", "Golden St.", "Houston", "Indiana",
+            "L.A. Clippers", "L.A. Lakers", "Memphis", "Miami",
+            "Milwaukee", "Minnesota", "New Orleans", "New York",
+            "Oklahoma City", "Orlando", "Philadelphia", "Phoenix",
+            "Portland", "Sacramento", "San Antonio", "Toronto",
+            "Utah", "Washington"
+        ]
+        
+        # Split teams into groups of 25 or less
+        for i in range(0, len(all_teams), 25):
+            self.add_item(TeamSelectionDropdown(all_teams[i:i+25]))
+
+async def fetch_injury_report(team):
+    url = "https://www.cbssports.com/nba/injuries/"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                soup = BeautifulSoup(await response.text(), 'html.parser')
+                team_section = soup.find('div', class_='TeamLogoNameLockup-name', string=team)
+                if team_section:
+                    injury_table = team_section.find_next('table', class_='TableBase-table')
+                    if injury_table:
+                        embed = discord.Embed(title=f"🏀 Injury Report for {team}", color=0x1E90FF)
+                        embed.set_thumbnail(url="https://i.imgur.com/9gkhv87.png")  # NBA logo
+                        rows = injury_table.find_all('tr')[1:]  
+                        for row in rows:
+                            cols = row.find_all('td')
+                            if len(cols) >= 4:
+                                player_element = cols[0].find('span', class_='CellPlayerName--long')
+                                if player_element:
+                                    player = player_element.text.strip()
+                                else:
+                                    player = cols[0].text.strip()
+                                
+                                position = cols[1].text.strip()
+                                updated = cols[2].text.strip()
+                                injury = cols[3].text.strip()
+                                comment = cols[4].text.strip() if len(cols) > 4 else "N/A"
+
+                                full_position = POSITION_MAP.get(position, position)
+                                
+                                embed.add_field(
+                                    name=f"**__{player}__**",
+                                    value=(
+                                        f"```yaml\n"
+                                        f"Position: {full_position}\n"
+                                        f"```\n"
+                                        f"```fix\n"
+                                        f"Injury: {injury}\n"
+                                        f"```\n"
+                                        f"```css\n"
+                                        f"Estimated Return: {comment}\n"
+                                        f"```"
+                                    ),
+                                    inline=False
+                                )
+                                embed.add_field(name="\u200b", value="\u200b", inline=False)  
+                        if not embed.fields:
+                            embed.description = "✅ No injuries reported for this team."
+                        embed.set_footer(text=f"Data from CBS Sports | Last Updated: {updated}", icon_url="https://i.imgur.com/9gkhv87.png")
+                        return embed
+                    else:
+                        return discord.Embed(title=f"🏀 Injury Report for {team}", description="No injury information found for this team.", color=0xFF5733)
+                else:
+                    return discord.Embed(title="❌ Error", description="Team not found in the injury report.", color=0xFF0000)
+            else:
+                return discord.Embed(title="❌ Error", description="Failed to fetch injury data. Please try again later.", color=0xFF0000)
+
 @bot.command()
 async def dropdown(ctx):
     """Sends a message with a dropdown."""
@@ -270,4 +369,3 @@ async def on_ready():
     
 
 bot.run(TOKEN)
-
