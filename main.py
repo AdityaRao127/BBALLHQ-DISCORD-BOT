@@ -251,7 +251,6 @@ class DropdownView(discord.ui.View):
         super().__init__()
         self.add_item(OptionsDropdown())
 
-# Add this new class after the existing dropdown classes
 class TeamSelectionDropdown(discord.ui.Select):
     def __init__(self, teams):
         options = [discord.SelectOption(label=team, value=team) for team in teams]
