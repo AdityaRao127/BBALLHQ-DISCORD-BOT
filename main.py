@@ -13,7 +13,6 @@ import time
 import feedparser
 import re
 import os
-from keep_alive import keep_alive
 from datetime import datetime
 import asyncio
 import tempfile
@@ -32,8 +31,6 @@ CHANNEL = os.getenv('DISCORD_CHANNEL')
 
 
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all(), hearbeat_timeout=60)
-
-keep_alive()
 
 POSITION_MAP = {
     "PG": "Point Guard",
