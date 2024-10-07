@@ -97,7 +97,6 @@ class OptionsDropdown(discord.ui.Select):
                 if news_posts:
                     embed = discord.Embed(title="📰 NBA News Updates 📰", color=0x1D428A)
 
-                    # Process new stories
                     for post in news_posts:
                         if post['title'] not in self.seen_stories:
                             # If the story is new, add it to the embed as a new story
