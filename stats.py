@@ -7,24 +7,36 @@ import pandas as pd
 import asyncio
 import time
 from discord.ext import commands
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 current_year = dt.datetime.now().year
 if dt.datetime.now().month < 10:
     current_year = current_year - 1
 
 async def get_player_stats(player_name):
+    logger.debug(f"Fetching stats for player: {player_name}")
     # Find player by name
     player_dict = players.get_players()
     player = [p for p in player_dict if p['full_name'].lower() == player_name.lower()]
     if player:
         player_id = player[0]['id']
+        logger.debug(f"Player ID: {player_id}")
+
+        logger.debug("Fetching career stats")
         career = playercareerstats.PlayerCareerStats(player_id=player_id)
         career_df = career.get_data_frames()[0]
+        time.sleep(3)  # Increased sleep time
 
-        # Fetch advanced stats
+        logger.debug("Fetching advanced stats")
         advanced_stats = playerdashboardbyyearoveryear.PlayerDashboardByYearOverYear(player_id=player_id)
         advanced_df = advanced_stats.get_data_frames()[1]
+        time.sleep(3)  # Increased sleep time
 
-        time.sleep(0.600)
+        logger.debug("Processing stats data")
         latest_season_reg = career_df.iloc[-1]
         latest_season_advanced = advanced_df.iloc[-1]
 
@@ -61,28 +73,38 @@ async def get_player_stats(player_name):
 
         #embed.set_footer(text="Data provided by NBA API")
 
+        logger.debug("Player stats embed created successfully")
         return embed
     else:
+        logger.warning(f"Player not found: {player_name}")
         embed = discord.Embed(
             title="Error",
             description="Spell the player's name correctly",
             color=0xff0000  # Red color
         )
         return embed
+
 async def get_team_stats(team_name):
+    logger.debug(f"Fetching stats for team: {team_name}")
     # Find team by name
     team_dict = teams.get_teams()
     team = [t for t in team_dict if t['full_name'].lower() == team_name.lower()]
 
     if team:
         team_id = team[0]['id']
-        # Fetch team dashboard stats
+        logger.debug(f"Team ID: {team_id}")
+
+        logger.debug("Fetching team dashboard stats")
         team_stats = teamdashboardbygeneralsplits.TeamDashboardByGeneralSplits(team_id=team_id)
+        time.sleep(3)  # Increased sleep time
+
+        logger.debug("Fetching team shooting splits")
         team_ranks = teamdashboardbyshootingsplits.TeamDashboardByShootingSplits(team_id=team_id)
+        time.sleep(3)  # Increased sleep time
         
-        time.sleep(0.600)
+        logger.debug("Processing team stats data")
         team_df = team_stats.get_data_frames()[0]  # Assuming first DataFrame contains seasonal stats
-       # other_df = team_ranks.get_data_frames()[0]
+        # other_df = team_ranks.get_data_frames()[0]
         
         stats = {
             "Wins": team_df['W'][0],
@@ -118,6 +140,8 @@ async def get_team_stats(team_name):
         )
         
         
+        logger.debug("Team stats message created successfully")
         return stats_message
     else:
+        logger.warning(f"Team not found: {team_name}")
         return "Spell the team name correctly"

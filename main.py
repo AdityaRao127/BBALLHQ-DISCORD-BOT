@@ -7,12 +7,10 @@ from shotchart import shot_map
 from discord.ui import View, Button
 from playbyplay import get_play_by_play, fetch_live_games, fetch_ongoing_game_ids
 from news import fetch_feed
-from discord.ext import commands 
 import schedule 
 import time
 import feedparser
 import re
-import os
 from datetime import datetime
 import asyncio
 import tempfile
@@ -21,14 +19,12 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import aiohttp
 from collections import deque
-
-
+import logging
 
 # Load the environment variable
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL = os.getenv('DISCORD_CHANNEL')
-
 
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all(), hearbeat_timeout=60)
 
@@ -42,16 +38,20 @@ POSITION_MAP = {
     "F": "Forward"
 }
 
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 class OptionsDropdown(discord.ui.Select):
     def __init__(self):
-        options=[
+        options = [
             discord.SelectOption(label='Live NBA Scores', description='Live scores from nba games 🏀'),
-            discord.SelectOption(label = 'Play-by-play', description='NBA play-by-play of the game 📢'),
+            discord.SelectOption(label='Play-by-play', description='NBA play-by-play of the game 📢'),
             discord.SelectOption(label='Watch Games', description='Watch live 📺'),
             discord.SelectOption(label='Player Stats', description='Player stats📊'),
-            discord.SelectOption(label ='Team Stats', description='Team_stats📊'),
+            discord.SelectOption(label='Team Stats', description='Team_stats📊'),
             discord.SelectOption(label='Injury Report', description='Latest injury report of teams 🚑'),
-            discord.SelectOption(label ='Shot Chart', description='Shot chart of players 2023-24 season 📈'),
+            discord.SelectOption(label='Shot Chart', description='Shot chart of players 2023-24 season 📈'),
             discord.SelectOption(label='Machine Learning Prediction', description='Simple ML-based predictions of a game🤖'),
             discord.SelectOption(label='Latest NBA News', description='Latest news from trusted NBA reporters 📰'),
         ]
@@ -61,28 +61,32 @@ class OptionsDropdown(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "Live NBA Scores":
+            await interaction.response.defer()
             live_scores_text = await fetch_live_games()
-            await interaction.response.send_message(live_scores_text)
+            time.sleep(1)  
+            await interaction.followup.send(live_scores_text)
         
         elif self.values[0] == "Play-by-play":
+            await interaction.response.defer()
             ongoing_games = await fetch_ongoing_game_ids()
+            time.sleep(1)  # Add a small delay after fetching ongoing games
             if ongoing_games:
                 view = LiveGamesView(ongoing_games)
-                await interaction.response.send_message("Select a game to view play-by-play details:", view=view)
+                await interaction.followup.send("Select a game to view play-by-play details:", view=view)
             else:
-                await interaction.response.send_message("No live games available at the moment.")
+                await interaction.followup.send("No live games available at the moment.")
         elif self.values[0] == "Watch Games":
             pass
         elif self.values[0] == "Player Stats":
-             modal = PlayerStats(timeout=180.0)  
-             await interaction.response.send_modal(modal)
+            modal = PlayerStats(timeout=180.0)  
+            await interaction.response.send_modal(modal)
         elif self.values[0] == "Team Stats":
-             await interaction.response.send_modal(TeamStats())
+            await interaction.response.send_modal(TeamStats())
         elif self.values[0] == "Injury Report":
             view = TeamSelectionView()
             await interaction.response.send_message("Select a team to view their injury report:", view=view)
         elif self.values[0] == "Shot Chart":
-               await interaction.response.send_modal(ShotChart())
+            await interaction.response.send_modal(ShotChart())
         elif self.values[0] == "Machine Learning Prediction":
             await interaction.response.send_message("This feature is coming soon! Try Player/Team Stats, Live Scores, Shot-Chart, or Latest News instead.")
         elif self.values[0] == "Latest NBA News":
@@ -91,62 +95,58 @@ class OptionsDropdown(discord.ui.Select):
 
             try:
                 news_posts = await fetch_nba_news()
+                time.sleep(1)
                 if news_posts:
                     embed = discord.Embed(title="📰 NBA News Updates 📰", color=0x1D428A)
 
                     for post in news_posts:
-                        if post['title'] not in self.seen_stories:
-                            # If the story is new, add it to the embed as a new story
-                            self.seen_stories.add(post['title'])
-                            embed.add_field(
-                                name=f"New Story",
-                                value=(
-                                    f"```yaml\n"
-                                    f"{post['title']}\n"
-                                    f"```\n"
-                                    f"[Source]({post['link']})\n"
-                                    f"Posted: {post['time']}\n"
-                                    f"\n\u200b"
-                                ),
-                                inline=False
-                            )
-                        else:
-                            if post not in self.old_stories:
-                                self.old_stories.append(post)
-                    if self.old_stories:
-                        old_stories_value = ""
-                        for i, post in enumerate(list(self.old_stories)[:3], 1):
-                            old_stories_value += (
-                                f"**Old Story {i}**\n"
+                        self.seen_stories.add(post['title'])
+                        embed.add_field(
+                            name=f"New Story",
+                            value=(
+                                f"```yaml\n"
                                 f"{post['title']}\n"
+                                f"```\n"
                                 f"[Source]({post['link']})\n"
-                                f"Posted: {post['time']}\n\n"
-                            )
-                        embed.add_field(name="Old Stories", value=old_stories_value, inline=False)
-
+                                f"Posted: {post['time']}\n"
+                                f"\n\u200b"
+                            ),
+                            inline=False
+                        )
+                        
+                        if post not in self.old_stories:
+                            self.old_stories.append(post)
+                if self.old_stories:
+                    old_stories_value = ""
+                    for i, post in enumerate(list(self.old_stories)[:3], 1):
+                        old_stories_value += (
+                            f"**Old Story {i}**\n"
+                            f"{post['title']}\n"
+                            f"[Source]({post['link']})\n"
+                            f"Posted: {post['time']}\n\n"
+                        )
+                    embed.add_field(name="Old Stories", value=old_stories_value, inline=False)
                     embed.set_footer(text="Stories taken from r/nba", icon_url="https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png")
                     await interaction.followup.send(embed=embed)
                 else:
                     await interaction.followup.send("No new updates found from specified reporters. Please try again later.")
             except Exception as e:
+                logger.error(f"Error fetching NBA news: {str(e)}")
                 await interaction.followup.send(f"An error occurred while fetching news: {str(e)}")
                 print(f"Error details: {e}")
 
-
-
-        
 class PlayerStats(discord.ui.Modal, title="Player Stats"):
     player_name = discord.ui.TextInput(label="Enter the NBA player's name:", style=discord.TextStyle.short)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Acknowledge the interaction
         await interaction.response.defer()
         loading_player_message = await interaction.followup.send(f"Loading {self.player_name.value.title()} stats...")
+        logger.debug(f"Fetching stats for player: {self.player_name.value}")
         player_stats_embed = await get_player_stats(self.player_name.value)
+        logger.debug("Player stats fetched successfully")
         await loading_player_message.edit(content=None, embed=player_stats_embed)
-        
-class TeamStats(discord.ui.Modal, title="Team Stats"):
 
+class TeamStats(discord.ui.Modal, title="Team Stats"):
     team_name = discord.ui.TextInput(label="Enter an NBA team name:", style=discord.TextStyle.short)
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -154,7 +154,7 @@ class TeamStats(discord.ui.Modal, title="Team Stats"):
         loading_message = await interaction.followup.send(f"Loading {self.team_name.value.title()} stats...")
         team_stats = await get_team_stats(self.team_name.value)
         await loading_message.edit(content=team_stats)
-        
+
 # new view for shotcharts
 class ChartTypeView(discord.ui.View):
     def __init__(self, player_name):
@@ -203,7 +203,7 @@ class LiveGamesView(discord.ui.View):
 
     async def handle_button_click(self, interaction: discord.Interaction):
         game_id = interaction.data['custom_id'].split('_')[1]
-        last_action_number = self.last_action_numbers.get(game_id, -1)  # Initialize with -1
+        last_action_number = self.last_action_numbers.get(game_id, -1)
         await interaction.response.defer(ephemeral=True)
 
         start_time = datetime.now()
@@ -212,13 +212,14 @@ class LiveGamesView(discord.ui.View):
         while True:
             try:
                 plays, last_action_number = await get_play_by_play(game_id, last_action_number)
+                time.sleep(1)  # Add a small delay after each play-by-play fetch
                 if plays:
                     for play in reversed(plays):  # Iterate over plays in reverse order
                         formatted_play = f"`{play['actionNumber']}` **{play['period']}:{play['clock']}** ({play['actionType']} {play['description']})"
                         await interaction.followup.send(formatted_play)
                     self.last_action_numbers[game_id] = last_action_number
                 elif not plays:
-                    # Check if 25 minutes have passed since the last play
+                    # 25 minutes check since last play(cause halftime is 15)
                     if (datetime.now() - start_time).total_seconds() / 60 > 25:
                         await interaction.followup.send("No new plays in the last 25 minutes. Ending play-by-play.")
                         break
@@ -241,10 +242,10 @@ class LiveGamesView(discord.ui.View):
                     await asyncio.sleep(0.1)
 
             except Exception as e:
-                print(f"Error during interaction: {e}")
+                logger.error(f"Error during play-by-play interaction: {e}")
                 await interaction.followup.send(f"Error: {str(e)}")
                 break
-                
+
 class DropdownView(discord.ui.View):
     def __init__(self):
         super().__init__()
@@ -281,11 +282,13 @@ class TeamSelectionView(discord.ui.View):
             self.add_item(TeamSelectionDropdown(all_teams[i:i+25]))
 
 async def fetch_injury_report(team):
+    logger.debug(f"Fetching injury report for team: {team}")
     url = "https://www.cbssports.com/nba/injuries/"
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             if response.status == 200:
                 soup = BeautifulSoup(await response.text(), 'html.parser')
+                time.sleep(1)  # Add a small delay after fetching and parsing the injury report
                 team_section = soup.find('div', class_='TeamLogoNameLockup-name', string=team)
                 if team_section:
                     injury_table = team_section.find_next('table', class_='TableBase-table')
@@ -301,10 +304,10 @@ async def fetch_injury_report(team):
                                     player = player_element.text.strip()
                                 else:
                                     player = cols[0].text.strip()
-                                    position = cols[1].text.strip()
-                                    updated = cols[2].text.strip()
-                                    injury = cols[3].text.strip()
-                                    comment = cols[4].text.strip() if len(cols) > 4 else "N/A"
+                                position = cols[1].text.strip()
+                                updated = cols[2].text.strip()
+                                injury = cols[3].text.strip()
+                                comment = cols[4].text.strip() if len(cols) > 4 else "N/A"
 
                                 full_position = POSITION_MAP.get(position, position)
                                 
@@ -327,12 +330,14 @@ async def fetch_injury_report(team):
                         if not embed.fields:
                             embed.description = "✅ No injuries reported for this team."
                         embed.set_footer(text=f"Data from CBS Sports | Last Updated: {updated}", icon_url="https://sports.cbsimg.net/images/cbss/ui5/cbssportsv2_200x200.png")
+                        logger.debug("Injury report fetched and processed successfully")
                         return embed
                     else:
                         return discord.Embed(title=f"🏀 Injury Report for {team}", description="No injury information found for this team.", color=0xFF5733)
                 else:
                     return discord.Embed(title="❌ Error", description="Team not found in the injury report.", color=0xFF0000)
             else:
+                logger.error(f"Failed to fetch injury data. Status code: {response.status}")
                 return discord.Embed(title="❌ Error", description="Failed to fetch injury data. Please try again later.", color=0xFF0000)
 
 async def fetch_nba_news():
@@ -344,6 +349,7 @@ async def fetch_nba_news():
             async with session.get(url, headers=headers, ssl=False) as response:
                 if response.status == 200:
                     soup = BeautifulSoup(await response.text(), 'html.parser')
+                    time.sleep(1)  # Add a small delay after fetching and parsing the news
                     posts = soup.find_all('div', class_='thing')
                     
                     news_posts = []
@@ -390,7 +396,7 @@ async def fetch_nba_news():
                     
                     return news_posts
         except Exception as e:
-            print(f"Error fetching NBA news: {str(e)}")
+            logger.error(f"Error fetching NBA news: {str(e)}")
     
     return []
 
@@ -409,12 +415,8 @@ async def hi(ctx):
     """Greet users and provide instructions."""
     await ctx.send('Hello, I am an NBA bot. Type !dropdown to get started!')
 
-
-
-
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
-    
 
 bot.run(TOKEN)
