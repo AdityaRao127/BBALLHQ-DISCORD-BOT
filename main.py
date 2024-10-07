@@ -21,6 +21,8 @@ from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 import pandas as pd
 import aiohttp
+from collections import deque, OrderedDict
+
 
 
 # Load the environment variable
@@ -55,10 +57,11 @@ class OptionsDropdown(discord.ui.Select):
             discord.SelectOption(label='Injury Report', description='Latest injury report of teams 🚑'),
             discord.SelectOption(label ='Shot Chart', description='Shot chart of players 2023-24 season 📈'),
             discord.SelectOption(label='Machine Learning Prediction', description='Simple ML-based predictions of a game🤖'),
-            discord.SelectOption(label='Latest News', description='Reliable news sources 📰'),
-        
+            discord.SelectOption(label='Latest NBA News', description='Latest news from trusted NBA reporters 📰'),
         ]
         super().__init__(placeholder='Choose an option', options=options, min_values=1, max_values=1)
+        self.old_stories = deque(maxlen=3)
+        self.seen_stories = set()  # Track seen stories
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "Live NBA Scores":
@@ -86,62 +89,58 @@ class OptionsDropdown(discord.ui.Select):
                await interaction.response.send_modal(ShotChart())
         elif self.values[0] == "Machine Learning Prediction":
             await interaction.response.send_message("This feature is coming soon! Try Player/Team Stats, Live Scores, Shot-Chart, or Latest News instead.")
-        elif self.values[0] == "Latest News":
+        elif self.values[0] == "Latest NBA News":
             await interaction.response.defer()
-            await interaction.followup.send("Fetching latest news...")
+            await interaction.followup.send("Fetching latest NBA news...")
 
             try:
-                shams_tweets = await fetch_popular_tweets('ShamsCharania', total_scrolls=5)
-                if shams_tweets:
-                    shams_message = "Shams' Latest Updates:\n"
-                    for tweet in shams_tweets[:3]:  #latest 3 tweets
-                        shams_message += f"**Tweet Content**:\n{tweet['content']}\n\nAuthor: {tweet['author']}\nRelevancy: {tweet['published']}\n\n"
-                    await interaction.followup.send(shams_message)
+                news_posts = await fetch_nba_news()
+                if news_posts:
+                    embed = discord.Embed(title="📰 NBA News Updates 📰", color=0x1D428A)
+
+                    # Process new stories
+                    for post in news_posts:
+                        if post['title'] not in self.seen_stories:
+                            # If the story is new, add it to the embed as a new story
+                            self.seen_stories.add(post['title'])
+                            embed.add_field(
+                                name=f"New Story",
+                                value=(
+                                    f"```yaml\n"
+                                    f"{post['title']}\n"
+                                    f"```\n"
+                                    f"[Source]({post['link']})\n"
+                                    f"Posted: {post['time']}\n"
+                                    f"\n\u200b"
+                                ),
+                                inline=False
+                            )
+                        else:
+                            # If the story has been seen before, move it to old stories
+                            if post not in self.old_stories:
+                                self.old_stories.append(post)
+
+                    # Old stories (vertical, in embed)
+                    if self.old_stories:
+                        old_stories_value = ""
+                        for i, post in enumerate(list(self.old_stories)[:3], 1):
+                            old_stories_value += (
+                                f"**Old Story {i}**\n"
+                                f"{post['title']}\n"
+                                f"[Source]({post['link']})\n"
+                                f"Posted: {post['time']}\n\n"
+                            )
+                        embed.add_field(name="Old Stories", value=old_stories_value, inline=False)
+
+                    embed.set_footer(text="Stories taken from r/nba", icon_url="https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png")
+                    await interaction.followup.send(embed=embed)
                 else:
-                    await interaction.followup.send("No new updates found.")
+                    await interaction.followup.send("No new updates found from specified reporters. Please try again later.")
             except Exception as e:
-                await interaction.followup.send(f"An error occurred while fetching tweets: {str(e)}")
+                await interaction.followup.send(f"An error occurred while fetching news: {str(e)}")
+                print(f"Error details: {e}")
 
-async def fetch_popular_tweets(username, total_scrolls=10):
-    link = f"https://x.com/{username}"
-    data = []
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        await page.goto(link, timeout=500000)
-
-        initial_height = 0
-        final_height = 1000
-        for _ in range(total_scrolls):
-            await page.mouse.wheel(initial_height, final_height)
-            initial_height = final_height
-            final_height = final_height + 300
-            await asyncio.sleep(4)
-            content = await page.content()
-            soup = BeautifulSoup(content, 'html.parser')
-            all_posts = soup.find_all('div', {'data-testid': 'cellInnerDiv'})
-
-            for post in all_posts:
-                check_retweet = post.find('div', {'role': 'link'})
-
-                if check_retweet is None:
-                    tweet_element = post.find('div', {'data-testid': 'tweetText'})
-                    if tweet_element:
-                        tweet = tweet_element.get_text(strip=True)
-
-                        data.append({
-                            'content': tweet,
-                            'author': username,
-                            'published': 'Popular Tweets'
-                        })
-
-        await browser.close()
-
-    df = pd.DataFrame(data)
-    df.drop_duplicates(inplace=True)
-    latest_tweets = df.to_dict('records')
-    return latest_tweets
 
         
 class PlayerStats(discord.ui.Modal, title="Player Stats"):
@@ -310,11 +309,10 @@ async def fetch_injury_report(team):
                                     player = player_element.text.strip()
                                 else:
                                     player = cols[0].text.strip()
-                                
-                                position = cols[1].text.strip()
-                                updated = cols[2].text.strip()
-                                injury = cols[3].text.strip()
-                                comment = cols[4].text.strip() if len(cols) > 4 else "N/A"
+                                    position = cols[1].text.strip()
+                                    updated = cols[2].text.strip()
+                                    injury = cols[3].text.strip()
+                                    comment = cols[4].text.strip() if len(cols) > 4 else "N/A"
 
                                 full_position = POSITION_MAP.get(position, position)
                                 
@@ -336,7 +334,7 @@ async def fetch_injury_report(team):
                                 embed.add_field(name="\u200b", value="\u200b", inline=False)  
                         if not embed.fields:
                             embed.description = "✅ No injuries reported for this team."
-                        embed.set_footer(text=f"Data from CBS Sports | Last Updated: {updated}", icon_url="https://i.imgur.com/9gkhv87.png")
+                        embed.set_footer(text=f"Data from CBS Sports | Last Updated: {updated}", icon_url="https://sports.cbsimg.net/images/cbss/ui5/cbssportsv2_200x200.png")
                         return embed
                     else:
                         return discord.Embed(title=f"🏀 Injury Report for {team}", description="No injury information found for this team.", color=0xFF5733)
@@ -344,6 +342,65 @@ async def fetch_injury_report(team):
                     return discord.Embed(title="❌ Error", description="Team not found in the injury report.", color=0xFF0000)
             else:
                 return discord.Embed(title="❌ Error", description="Failed to fetch injury data. Please try again later.", color=0xFF0000)
+
+async def fetch_nba_news():
+    url = "https://old.reddit.com/r/nba/new/"
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+    
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url, headers=headers, ssl=False) as response:
+                if response.status == 200:
+                    soup = BeautifulSoup(await response.text(), 'html.parser')
+                    posts = soup.find_all('div', class_='thing')
+                    
+                    news_posts = []
+                    for post in posts:
+                        title_element = post.find('a', class_='title')
+                        time_element = post.find('time', class_='live-timestamp')
+                        if title_element and time_element:
+                            title = title_element.text.strip()
+                            if any(reporter in title for reporter in [
+                                "[Charania]", "[Koreen]", "[Lewenberg]", "[Slater]", "[Stein]", "[Haynes]", "[Woj]",
+                                "[Amick]", "[Andrews]", "[Bontemps]", "[Buckner]", "[Fischer]", "[Ganguli]", "[Golliver]",
+                                "[Goodwill]", "[Holmes]", "[MacMahon]", "[Marks]", "[Noh]", "[Pelton]", "[Reynolds]",
+                                "[Rohlin]", "[Scotto]", "[Smith]", "[Spears]", "[Vecenie]", "[Vorkunov]", "[Windhorst]",
+                                "[Wojnarowski]", "[Woo]", "[Youngmisuk]", "[Benson]", "[Chouinard]", "[Rowland]", "[Williams]",
+                                "[Bulpett]", "[Forsberg]", "[Himmelsbach]", "[King]", "[Murphy]", "[Robb]", "[Washburn]",
+                                "[Weiss]", "[Lewis]", "[Phillips-Keaton]", "[Sturm]", "[Triplett]", "[Boone]", "[Gottlieb]",
+                                "[Johnson]", "[Mayberry]", "[Poe]", "[Schaefer]", "[Westerlund]", "[Fedor]", "[Russo]",
+                                "[Afseth]", "[Caplan]", "[Cato]", "[Townsend]", "[Benedetto]", "[Dempsey]", "[Durando]",
+                                "[Rush]", "[Singer]", "[Wind]", "[Beard]", "[Curtis]", "[Edwards]", "[Langlois]", "[Sankofa]",
+                                "[Burke]", "[Holmes]", "[Kawakami]", "[Letourneau]", "[Poole]", "[Slater]", "[Thompson]",
+                                "[Bijani]", "[Feigen]", "[Gatlin]", "[Iko]", "[Spolane]", "[Williams]", "[Agness]", "[East]",
+                                "[Azarly]", "[Esnaashari]", "[Greif]", "[Linn]", "[Murray]", "[Russo]", "[Buha]", "[Goon]",
+                                "[McMenamin]", "[Trudell]", "[Turner]", "[Woike]", "[Cole]", "[Giannotto]", "[Herrington]",
+                                "[Parrish]", "[Chiang]", "[Jackson]", "[Manso]", "[Winderman]", "[Madden]", "[Nehm]",
+                                "[Owczarski]", "[Frederick]", "[Hine]", "[Krawcyznski]", "[Moore]", "[Wolfson]", "[Clark]",
+                                "[Eichenhofer]", "[Guillory]", "[Lopez]", "[Begley]", "[Hahn]", "[Katz]", "[Macri]",
+                                "[Popper]", "[Winfield]", "[Almanza]", "[Mussatto]", "[Parker]", "[Rahbar]", "[Schlecht]",
+                                "[Price]", "[Bodner]", "[Mizell]", "[Neubeck]", "[Pompey]", "[Bourguet]", "[Gambadoro]",
+                                "[King]", "[Olson]", "[Rankin]", "[Zimmerman]", "[Highkin]", "[Holdahl]", "[Quick]",
+                                "[Christensen]", "[Cunningham]", "[Dave]", "[Ham]", "[Finger]", "[Garcia]", "[McDonald]",
+                                "[Orsborn]", "[Tynan]", "[Grange]", "[Lewenberg]", "[Lou]", "[Koreen]", "[Murphy]",
+                                "[Smith]", "[Uthayakumar]", "[Wolstat]", "[Anderson]", "[Jones]", "[Larsen]", "[Locke]",
+                                "[Todd]", "[Walden]", "[Aldridge]", "[Cole]", "[Dalal]", "[Hughes]", "[Miller]", "[Robbins]",
+                                "[Wallace]"
+                            ]):
+                                link = title_element['href']
+                                if not link.startswith('http'):
+                                    link = f"https://old.reddit.com{link}"
+                                time_ago = time_element.text.strip()
+                                news_posts.append({'title': title, 'link': link, 'time': time_ago})
+                        
+                        if len(news_posts) >= 3:
+                            break
+                    
+                    return news_posts
+        except Exception as e:
+            print(f"Error fetching NBA news: {str(e)}")
+    
+    return []
 
 @bot.command()
 async def dropdown(ctx):
