@@ -7,5 +7,4 @@ RUN playwright install chromium
 COPY . /bot/
 RUN chmod +x start.sh
 ENV PATH=$PATH:/bot
-EXPOSE 8082
 CMD ["sh", "start.sh"]

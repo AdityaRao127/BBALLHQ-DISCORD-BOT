@@ -21,7 +21,7 @@ from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 import pandas as pd
 import aiohttp
-from collections import deque, OrderedDict
+from collections import deque
 
 
 
@@ -30,12 +30,11 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL = os.getenv('DISCORD_CHANNEL')
 
-# Initialize the bot
+
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all(), hearbeat_timeout=60)
 
 keep_alive()
 
-# Add this position map near the top of your file, after the imports
 POSITION_MAP = {
     "PG": "Point Guard",
     "SG": "Shooting Guard",
@@ -116,11 +115,8 @@ class OptionsDropdown(discord.ui.Select):
                                 inline=False
                             )
                         else:
-                            # If the story has been seen before, move it to old stories
                             if post not in self.old_stories:
                                 self.old_stories.append(post)
-
-                    # Old stories (vertical, in embed)
                     if self.old_stories:
                         old_stories_value = ""
                         for i, post in enumerate(list(self.old_stories)[:3], 1):
